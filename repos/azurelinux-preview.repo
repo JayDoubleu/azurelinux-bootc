@@ -1,0 +1,14 @@
+# Azure Linux 4.0 preview repo. The beta base container only carries the beta repo,
+# which lacks bubblewrap. bootc 1.13 needs bwrap to run bootupctl during install.
+# The preview path uses "4", not $releasever, which expands to "4.0" in this image.
+[azurelinux-preview-base]
+name=Azure Linux $releasever - $basearch - Preview Base
+baseurl=https://packages.microsoft.com/azurelinux/4/preview/base/$basearch
+enabled=1
+countme=1
+metadata_expire=7d
+repo_gpgcheck=0
+type=rpm
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-azurelinux-$releasever-$basearch
+skip_if_unavailable=False

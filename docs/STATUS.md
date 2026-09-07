@@ -1,0 +1,50 @@
+# Status
+
+Read this first. Update it at the end of every session.
+
+Last updated: 2026-09-07, session 1
+
+## Current milestone
+
+M1 and M2 are done. Next is M3 (harden). See `docs/ROADMAP.md`.
+
+## What works (verified, with date)
+
+- 2026-09-07: `make build` produces `localhost/azurelinux-bootc:dev` (1.3 GB). `bootc container lint` passes 12 checks with 1 warning (`var-tmpfiles`).
+- 2026-09-07: `make registry` and `make push` work. The registry at `localhost:5000` holds `azurelinux-bootc:dev`.
+- 2026-09-07: `make disk` works. It re-runs itself on the host with sudo. `bootc install to-disk` writes GPT, ESP, XFS root, and the grub EFI and BIOS loaders through bootupd.
+- 2026-09-07: `make run-bg` boots the disk with OVMF. GRUB 2.12 loads kernel 6.18.45-1.3.azl4. systemd-networkd gets DHCP. sshd answers on port 2222 with the generated key.
+- 2026-09-07: in the VM, `bootc status` shows the booted image `10.0.2.2:5000/azurelinux-bootc:dev`, store `ostreeContainer`. `/usr/lib/azurelinux-bootc/version` prints `1`. SELinux is permissive.
+- 2026-09-07: the VM can reach the local registry: `skopeo inspect --tls-verify=false docker://10.0.2.2:5000/azurelinux-bootc:dev` works.
+- 2026-09-07: `make upgrade` passes. The VM ran `bootc upgrade`, pulled version 2 from `10.0.2.2:5000` (8 new layers, 793 MB), rebooted into version 2 in about 16 seconds, ran `bootc rollback`, and rebooted into version 1. Logs: `out/logs/upgrade.log`, `out/logs/status-*.txt`.
+- 2026-09-07: `make check` and `make lint` pass.
+
+## What is unverified or broken
+
+- Lint warning `var-tmpfiles`: `/var` content has no tmpfiles.d entries. Deferred. ostree copies the image's `/var` into the machine's `/var` on the first deployment.
+- The `ARG VERSION` line was moved below the package layers, so a new version reuses the cached layers. The first build after the move rebuilt everything once. Verify on the next `make upgrade` that only the config layers rebuild.
+- The upgrade image is 8 layers of 793 MB because every change after the package layer sits in one big layer. Chunking (`rpm-ostree compose` style layer splitting, or `bootc` layer hints) is future work.
+
+## Next action
+
+1. Commit the scaffold and the working loop. Nothing is committed yet.
+2. Start M3: switch SELinux to enforcing and check the boot and the upgrade test.
+3. Pin the base image by digest in the Containerfile.
+4. Reduce the upgrade download size: split the image into more layers so a version bump changes only a small layer.
+
+## Environment notes
+
+- Claude runs in a Fedora toolbox. Scripts call host tools with `flatpak-spawn --host`.
+- The user authorised sudo on the host for this loop. sudo is set up on the host. See `CLAUDE.md`.
+- The Bash tool shell is zsh. Do not `source scripts/lib.sh` inline; run the scripts, which have a bash shebang.
+- Host DNS failed once for a few minutes. If a build fails with "Could not resolve hostname", retry.
+- The 4.0 beta base container uses the repo path `azurelinux/4.0/beta/base` (`$releasever` is `4.0`). The preview repo path is `azurelinux/4/preview/base`, with a literal `4`. `repos/azurelinux-preview.repo` adds it because the beta repo lacks bubblewrap. Packages now come from the preview repo where it is newer.
+- The 4.0 kernel package ships `vmlinuz` under `/boot`. The Containerfile moves it.
+- bootupd 0.2.32 reads EFI files from `/usr/lib/ostree-boot/efi/EFI` and needs `/boot/efi` present for `rpm -qf`. The Containerfile copies `/boot/efi` there before `bootupctl backend generate-update-metadata`.
+- bootc 1.13 runs `bootupctl` inside a bwrap sandbox during install, so the image needs `bubblewrap`. A generic install writes both BIOS and EFI loaders, so it needs `grub2-pc-modules`.
+- `ostree container commit` does not work in this image. It needs an ostree repo marker under `/sysroot` that only rpm-ostree-composed images carry.
+- podman bind-mounts `/etc/resolv.conf` during the build. The resolv.conf symlink is created at boot by a tmpfiles rule instead.
+- `systemd-firstboot.service` prompts on the serial console and blocks the boot. It is masked.
+- The base image locks root with `!unprovisioned` in `/etc/shadow`. sshd refuses a locked account even for key login. The Containerfile sets the field to `*`.
+- The QEMU serial console is a unix socket with a log file. `scripts/43-serial.sh` types into it. `scripts/42-qemu-monitor.sh` talks to the QEMU monitor.
+- There is no `bootc-base-imagectl` in the 4.0 bootc package.
