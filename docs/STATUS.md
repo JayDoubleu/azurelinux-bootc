@@ -20,19 +20,20 @@ M1 and M2 are done. M3 (harden) is in progress: SELinux enforcing is done. See `
 - 2026-09-07: `make upgrade` passes. The VM ran `bootc upgrade`, pulled version 2 from `10.0.2.2:5000`, rebooted into version 2 in about 16 seconds, ran `bootc rollback`, and rebooted into version 1. Logs: `out/logs/upgrade.log`, `out/logs/status-*.txt`.
 - 2026-09-07: a version bump reuses the cached package layers. The second upgrade run reported `layers already present: 9; layers needed: 2 (2.5 kB)`.
 - 2026-09-07: `make check` and `make lint` pass.
+- 2026-09-07: the Containerfile pins the base image by digest (tag `4.0.2026052700`). `make base-digest` compares the pin with the `4.0` tag. The build reuses the cached layers with the pin. The image records its package list in `/usr/lib/azurelinux-bootc/packages` (302 packages).
 
 ## What is unverified or broken
 
 - Lint warning `var-tmpfiles`: `/var` content has no tmpfiles.d entries. Deferred. ostree copies the image's `/var` into the machine's `/var` on the first deployment.
+- The packages are not pinned. The preview repo has no snapshots. The package list in the image is the record of what each build got.
 - A config change downloads only small layers. A package update changes the single 1.2 GB package layer and downloads all of it. Chunking with `rpm-ostree compose build-chunked-oci` (present in rpm-ostree 2026.1) is the planned fix.
 
 ## Next action
 
-1. Pin the base image by digest in the Containerfile.
-2. Split the image into chunked layers so a package update downloads only the changed packages.
-3. Sign the image with a sigstore key and verify the signature in the VM with a policy in the image.
-4. Add a CI build.
-5. M5: test package layering with rpm-ostree.
+1. Split the image into chunked layers so a package update downloads only the changed packages.
+2. Sign the image with a sigstore key and verify the signature in the VM with a policy in the image.
+3. Add a CI build.
+4. M5: test package layering with rpm-ostree.
 
 ## Environment notes
 

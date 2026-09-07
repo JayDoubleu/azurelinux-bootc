@@ -1,11 +1,12 @@
 SHELL := /bin/bash
 VERSION ?= 1
 
-.PHONY: help check lint build registry registry-down push disk run run-bg wait stop ssh upgrade clean
+.PHONY: help check base-digest lint build registry registry-down push disk run run-bg wait stop ssh upgrade clean
 
 help:
 	@echo "Targets, in the order you run them:"
 	@echo "  check          verify host tools"
+	@echo "  base-digest    compare the pinned base image digest with the registry tag"
 	@echo "  build          build the bootc image (VERSION=$(VERSION))"
 	@echo "  registry       start the local OCI registry on 127.0.0.1:5000"
 	@echo "  push           push the image to the local registry"
@@ -22,6 +23,9 @@ help:
 
 check:
 	scripts/00-check-tools.sh
+
+base-digest:
+	scripts/05-base-digest.sh
 
 lint:
 	@if command -v shellcheck >/dev/null 2>&1; then \

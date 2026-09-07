@@ -4,7 +4,7 @@
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 status=0
-for tool in podman qemu-system-x86_64 qemu-img ssh-keygen; do
+for tool in podman skopeo qemu-system-x86_64 qemu-img ssh-keygen; do
   if host_has "$tool"; then
     log "ok       $tool"
   else

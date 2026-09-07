@@ -9,6 +9,10 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_DIR="${OUT_DIR:-$REPO_ROOT/out}"
 LOG_DIR="$OUT_DIR/logs"
 
+# The Containerfile pins this image by digest. 05-base-digest.sh compares the pin with the tag.
+BASE_IMAGE_REPO="mcr.microsoft.com/azurelinux-beta/base/core"
+BASE_IMAGE_TAG="4.0"
+
 IMAGE_NAME="${IMAGE_NAME:-azurelinux-bootc}"
 IMAGE_TAG="${IMAGE_TAG:-dev}"
 

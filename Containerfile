@@ -5,7 +5,9 @@
 # The image starts from the Azure Linux 4.0 preview base container. It adds a kernel,
 # the bootc stack, a UEFI bootloader and the services the QEMU test needs.
 
-ARG BASE_IMAGE=mcr.microsoft.com/azurelinux-beta/base/core:4.0
+# The base image is pinned by digest so the build does not change under us.
+# Pinned from tag 4.0.2026052700 (tag 4.0 on 2026-09-07). Check with: make base-digest
+ARG BASE_IMAGE=mcr.microsoft.com/azurelinux-beta/base/core@sha256:63ef5dda2fb5681ae3aa5c9597a8c4b24364da91ec459b419fa3c38160595fae
 FROM ${BASE_IMAGE}
 
 # 1. Packages.
@@ -78,6 +80,7 @@ RUN set -eux; \
 #    locked account even for key login, so the field becomes "*": no password, not locked.
 #    The build args sit here, after the package layers, so a new VERSION reuses the cache.
 # VERSION is a build number. The upgrade test reads it from the running VM.
+# The package list next to it records what the unpinned preview repo delivered.
 ARG VERSION=1
 # ROOT_PASSWORD, if set, unlocks root on the serial console. Leave empty for key-only access.
 ARG ROOT_PASSWORD=""
@@ -89,7 +92,8 @@ RUN set -eux; \
     if [ -n "${ROOT_PASSWORD}" ]; then echo "root:${ROOT_PASSWORD}" | chpasswd; else usermod -p '*' root; fi; \
     rm -f /etc/machine-id; \
     mkdir -p /usr/lib/azurelinux-bootc; \
-    echo "${VERSION}" > /usr/lib/azurelinux-bootc/version
+    echo "${VERSION}" > /usr/lib/azurelinux-bootc/version; \
+    rpm -qa --qf '%{NAME}-%{EVR}.%{ARCH}\n' | sort > /usr/lib/azurelinux-bootc/packages
 
 # 7. Drop build leftovers, then lint. `ostree container commit` is not used: it needs an
 #    ostree repo marker that only rpm-ostree-composed images carry. ostree copies the
