@@ -70,7 +70,7 @@ RUN set -eux; \
     rm -rf /usr/lib/ostree-boot /boot/*; \
     ls -R /usr/lib/efi | head -n 40
 
-# 6. Local configuration: serial console kernel args, DHCP on wired interfaces,
+# 6. Local configuration: SELinux enforcing, serial console kernel args, DHCP on wired interfaces,
 #    resolv.conf symlink via tmpfiles, root login by ssh key only, and the insecure
 #    test registry on the QEMU host. The systemd first-boot wizard is masked: it
 #    prompts on the console and blocks the boot until a key is pressed.
@@ -85,7 +85,7 @@ COPY config/ /
 RUN set -eux; \
     systemctl enable systemd-networkd systemd-resolved sshd; \
     systemctl mask systemd-firstboot.service; \
-    sed -i 's/^SELINUX=.*/SELINUX=permissive/' /etc/selinux/config; \
+    sed -i 's/^SELINUX=.*/SELINUX=enforcing/' /etc/selinux/config; \
     if [ -n "${ROOT_PASSWORD}" ]; then echo "root:${ROOT_PASSWORD}" | chpasswd; else usermod -p '*' root; fi; \
     rm -f /etc/machine-id; \
     mkdir -p /usr/lib/azurelinux-bootc; \

@@ -22,3 +22,10 @@ Append one entry per session. Newest at the bottom. Keep each entry short: what 
 - M2 attempt 1 and 2 failed in the version 2 build: `ARG VERSION` at the top invalidated the package layer, and host DNS failed for a few minutes. Moved the build args below the package layers.
 - M2 attempt 3 passed. `bootc upgrade` pulled version 2 from the local registry, the VM rebooted into version 2, `bootc rollback` returned it to version 1. Each reboot took about 16 seconds.
 - State at the end of the session: the VM runs in the background on version 1 with version 2 staged as the rollback target. `make stop` stops it. Nothing is committed.
+
+## 2026-09-07, session 2
+
+- Committed the scaffold as `1072f3e`.
+- Checked the journal of the permissive VM across all boots. The only AVC denials were `sshd_keygen_t` asking for the `sys_resource` capability. The policy has substitution rules for `/var/roothome`, `/var/usrlocal` and `/sysroot/tmp`, and every checked file carried the expected label.
+- Set `SELINUX=enforcing` in the Containerfile. Rebuilt version 1 with the cached package layers, reinstalled the disk, booted. `getenforce` printed `Enforcing`, no unit failed, sshd generated its host keys.
+- `make upgrade` passed in enforcing mode. The version bump downloaded 2 layers of 2.5 kB, so the `ARG VERSION` placement works.

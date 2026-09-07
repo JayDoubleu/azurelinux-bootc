@@ -2,11 +2,11 @@
 
 Read this first. Update it at the end of every session.
 
-Last updated: 2026-09-07, session 1
+Last updated: 2026-09-07, session 2
 
 ## Current milestone
 
-M1 and M2 are done. Next is M3 (harden). See `docs/ROADMAP.md`.
+M1 and M2 are done. M3 (harden) is in progress: SELinux enforcing is done. See `docs/ROADMAP.md`.
 
 ## What works (verified, with date)
 
@@ -14,23 +14,25 @@ M1 and M2 are done. Next is M3 (harden). See `docs/ROADMAP.md`.
 - 2026-09-07: `make registry` and `make push` work. The registry at `localhost:5000` holds `azurelinux-bootc:dev`.
 - 2026-09-07: `make disk` works. It re-runs itself on the host with sudo. `bootc install to-disk` writes GPT, ESP, XFS root, and the grub EFI and BIOS loaders through bootupd.
 - 2026-09-07: `make run-bg` boots the disk with OVMF. GRUB 2.12 loads kernel 6.18.45-1.3.azl4. systemd-networkd gets DHCP. sshd answers on port 2222 with the generated key.
-- 2026-09-07: in the VM, `bootc status` shows the booted image `10.0.2.2:5000/azurelinux-bootc:dev`, store `ostreeContainer`. `/usr/lib/azurelinux-bootc/version` prints `1`. SELinux is permissive.
+- 2026-09-07: in the VM, `bootc status` shows the booted image `10.0.2.2:5000/azurelinux-bootc:dev`, store `ostreeContainer`. `/usr/lib/azurelinux-bootc/version` prints `1`.
+- 2026-09-07: SELinux runs enforcing. `getenforce` prints `Enforcing` after a fresh install and after the upgrade test. No unit fails. The only AVC denials are `sshd_keygen_t` asking for the `sys_resource` capability; key generation still works.
 - 2026-09-07: the VM can reach the local registry: `skopeo inspect --tls-verify=false docker://10.0.2.2:5000/azurelinux-bootc:dev` works.
-- 2026-09-07: `make upgrade` passes. The VM ran `bootc upgrade`, pulled version 2 from `10.0.2.2:5000` (8 new layers, 793 MB), rebooted into version 2 in about 16 seconds, ran `bootc rollback`, and rebooted into version 1. Logs: `out/logs/upgrade.log`, `out/logs/status-*.txt`.
+- 2026-09-07: `make upgrade` passes. The VM ran `bootc upgrade`, pulled version 2 from `10.0.2.2:5000`, rebooted into version 2 in about 16 seconds, ran `bootc rollback`, and rebooted into version 1. Logs: `out/logs/upgrade.log`, `out/logs/status-*.txt`.
+- 2026-09-07: a version bump reuses the cached package layers. The second upgrade run reported `layers already present: 9; layers needed: 2 (2.5 kB)`.
 - 2026-09-07: `make check` and `make lint` pass.
 
 ## What is unverified or broken
 
 - Lint warning `var-tmpfiles`: `/var` content has no tmpfiles.d entries. Deferred. ostree copies the image's `/var` into the machine's `/var` on the first deployment.
-- The `ARG VERSION` line was moved below the package layers, so a new version reuses the cached layers. The first build after the move rebuilt everything once. Verify on the next `make upgrade` that only the config layers rebuild.
-- The upgrade image is 8 layers of 793 MB because every change after the package layer sits in one big layer. Chunking (`rpm-ostree compose` style layer splitting, or `bootc` layer hints) is future work.
+- A config change downloads only small layers. A package update changes the single 1.2 GB package layer and downloads all of it. Chunking with `rpm-ostree compose build-chunked-oci` (present in rpm-ostree 2026.1) is the planned fix.
 
 ## Next action
 
-1. Commit the scaffold and the working loop. Nothing is committed yet.
-2. Start M3: switch SELinux to enforcing and check the boot and the upgrade test.
-3. Pin the base image by digest in the Containerfile.
-4. Reduce the upgrade download size: split the image into more layers so a version bump changes only a small layer.
+1. Pin the base image by digest in the Containerfile.
+2. Split the image into chunked layers so a package update downloads only the changed packages.
+3. Sign the image with a sigstore key and verify the signature in the VM with a policy in the image.
+4. Add a CI build.
+5. M5: test package layering with rpm-ostree.
 
 ## Environment notes
 
