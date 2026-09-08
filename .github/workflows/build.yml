@@ -49,6 +49,11 @@ jobs:
             echo "using a throwaway signing key"
           fi
 
+      - name: Allow unprivileged user namespaces
+        # Ubuntu 24.04 lets only binaries with an AppArmor profile create user namespaces.
+        # podman has one, skopeo does not, and skopeo needs one to write the rootless image store.
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Build and chunk
         run: make build VERSION=${{ github.run_number }}
 
