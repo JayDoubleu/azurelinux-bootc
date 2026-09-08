@@ -7,11 +7,12 @@ The whole loop runs on the command line. No graphical console is needed.
 ```
 make build            # 1. podman builds the image from Containerfile, then rpm-ostree splits it into package-aligned layers
 make registry         # 2. a registry container listens on 127.0.0.1:5000
-make push             # 3. the image goes to localhost:5000/azurelinux-bootc:dev
+make push             # 3. skopeo signs the image and pushes it to localhost:5000/azurelinux-bootc:dev
 make disk             # 4. as root on the host: pull from the registry, `bootc install to-disk` into out/disk.raw
 make run-bg           # 5. QEMU boots out/disk.raw with OVMF; serial output goes to out/serial.log
 make ssh              # 6. ssh root@localhost -p 2222 with out/ssh/id_ed25519
 make upgrade          # 7. build v2, push, `bootc upgrade`, reboot, verify, `bootc rollback`, reboot, verify
+make sig-test         # 7b. push an unsigned image, expect `bootc upgrade --check` to fail, push signed, expect pass
 make stop             # 8. stop the VM
 ```
 
@@ -29,6 +30,14 @@ QEMU user networking maps the host to `10.0.2.2` inside the VM. The image marks 
 ## Layers
 
 `podman build` puts every package into one layer. `scripts/15-chunk-image.sh` runs `rpm-ostree compose build-chunked-oci` on the built image and regroups the files by package into up to 64 layers. The OCI directory `out/chunked` stays between builds so the layer boundaries stay stable. `bootc upgrade` then downloads only the layers whose packages changed.
+
+## Signatures
+
+The first `make build` runs `scripts/22-keys.sh`. It creates a sigstore key pair: the private key and its passphrase go to `out/keys/`, the public key to `config/etc/pki/containers/azurelinux-bootc.pub`. Both stay out of git. The build copies the public key into the image.
+
+`make push` signs the image with the private key. The signature is stored in the registry next to the image. `config/etc/containers/policy.json` in the image rejects every image by default and accepts `10.0.2.2:5000/azurelinux-bootc` only with a valid signature from that key. The signature names the image `localhost:5000/azurelinux-bootc`, the name the host pushed to, so the policy maps the VM's name for the registry to it with `exactRepository`.
+
+`make disk` installs with `--enforce-container-sigpolicy`. `make sig-test` checks both directions: an unsigned image is refused, the signed image is accepted.
 
 ## Versions
 

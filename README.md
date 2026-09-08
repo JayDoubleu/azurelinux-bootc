@@ -13,6 +13,7 @@ Status: experimental. Nothing here is supported by Microsoft.
 - `bootc install to-disk` writes the image to a disk file.
 - QEMU boots the disk file with UEFI firmware.
 - A local registry serves a second image version. The VM runs `bootc upgrade`, reboots, then `bootc rollback`.
+- The image is signed with a sigstore key. A policy in the image makes `bootc upgrade` refuse unsigned images.
 
 See `docs/ROADMAP.md` for milestones and `docs/decisions/` for why we chose this path.
 

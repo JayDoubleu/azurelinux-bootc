@@ -32,12 +32,17 @@ while IFS= read -r kv; do
   [ -n "$kv" ] && label_args+=(-l "$kv")
 done < <(host podman inspect --format '{{range $k, $v := .Config.Labels}}{{$k}}={{$v}}{{"\n"}}{{end}}' "$build_ref")
 
+# The image policy rejects every source except the registry, so rpm-ostree would refuse its own
+# output directory. The chunk container gets a permissive policy instead.
+printf '{"default": [{"type": "insecureAcceptAnything"}]}\n' > "$OUT_DIR/chunk-policy.json"
+
 log "chunking ${build_ref} into ${CHUNKED_DIR} (max ${MAX_LAYERS} layers)"
 # --privileged keeps rpm-ostree from re-running itself in a nested user namespace.
 host podman run --rm --privileged \
   --mount "type=image,src=${build_ref},dst=/rootfs" \
   -v "${CHUNKED_DIR}:/output" \
   -v "${CHUNK_TMP_DIR}:/var/tmp" \
+  -v "${OUT_DIR}/chunk-policy.json:/etc/containers/policy.json:ro" \
   "$build_ref" \
   rpm-ostree compose build-chunked-oci --bootc --format-version=1 \
     --max-layers "$MAX_LAYERS" "${label_args[@]}" \

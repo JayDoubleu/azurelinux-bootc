@@ -6,6 +6,11 @@
 # shellcheck source=lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
+# The image carries the public key from config/. Create the key pair on the first build.
+if [ ! -f "$SIGN_KEY" ] || [ ! -f "$SIGN_PUBKEY" ]; then
+  "$REPO_ROOT/scripts/22-keys.sh"
+fi
+
 version="${1:-1}"
 log "building ${IMAGE_NAME}:${BUILD_TAG} with VERSION=${version}"
 host podman build \

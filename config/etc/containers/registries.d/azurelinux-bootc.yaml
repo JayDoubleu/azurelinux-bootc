@@ -1,0 +1,7 @@
+# Sigstore signatures travel with the image as registry attachments. The host pushes to
+# localhost:5000; the VM pulls from 10.0.2.2:5000. Both names point at the same registry.
+docker:
+  localhost:5000:
+    use-sigstore-attachments: true
+  10.0.2.2:5000:
+    use-sigstore-attachments: true

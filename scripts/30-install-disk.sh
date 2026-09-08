@@ -3,6 +3,8 @@
 # This step needs root on the host: it uses loop devices and mounts.
 # It re-runs itself on the host with sudo when started from the toolbox or as a user.
 # It pulls the image from the local registry, because root podman has its own image store.
+# --enforce-container-sigpolicy records the target image as signature-verified, so bootc
+# upgrade refuses a policy that accepts unsigned images.
 # shellcheck source=lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
@@ -41,6 +43,7 @@ podman run --rm --privileged --pid=host \
     --wipe \
     --filesystem xfs \
     --target-imgref "$VM_IMAGE_REF" \
+    --enforce-container-sigpolicy \
     --root-ssh-authorized-keys /output/ssh/id_ed25519.pub \
     /output/disk.raw 2>&1 | tee "$LOG_DIR/install.log"
 

@@ -1,0 +1,20 @@
+{
+  "default": [{"type": "reject"}],
+  "transports": {
+    "docker": {
+      "10.0.2.2:5000/azurelinux-bootc": [
+        {
+          "type": "sigstoreSigned",
+          "keyPath": "/etc/pki/containers/azurelinux-bootc.pub",
+          "signedIdentity": {
+            "type": "exactRepository",
+            "dockerRepository": "localhost:5000/azurelinux-bootc"
+          }
+        }
+      ]
+    },
+    "containers-storage": {
+      "": [{"type": "insecureAcceptAnything"}]
+    }
+  }
+}

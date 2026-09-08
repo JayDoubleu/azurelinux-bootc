@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 VERSION ?= 1
 
-.PHONY: help check base-digest lint build chunk registry registry-down push disk run run-bg wait stop ssh upgrade clean
+.PHONY: help check base-digest lint build chunk keys registry registry-down push disk run run-bg wait stop ssh upgrade sig-test clean
 
 help:
 	@echo "Targets, in the order you run them:"
@@ -9,14 +9,16 @@ help:
 	@echo "  base-digest    compare the pinned base image digest with the registry tag"
 	@echo "  build          build the bootc image and chunk it (VERSION=$(VERSION))"
 	@echo "  chunk          split the built image into package-aligned layers"
+	@echo "  keys           create the sigstore signing key pair (build does this once)"
 	@echo "  registry       start the local OCI registry on 127.0.0.1:5000"
-	@echo "  push           push the image to the local registry"
+	@echo "  push           sign the image and push it to the local registry"
 	@echo "  disk           write the image to out/disk.raw (run on the host with sudo)"
 	@echo "  run            boot out/disk.raw in QEMU on this terminal"
 	@echo "  run-bg         boot out/disk.raw in QEMU in the background"
 	@echo "  wait           wait until the VM answers over ssh"
 	@echo "  ssh            open a root shell in the VM"
 	@echo "  upgrade        build the next version, upgrade the VM, verify, roll back"
+	@echo "  sig-test       check that the VM rejects an unsigned image and accepts the signed one"
 	@echo "  stop           stop the background VM"
 	@echo "  registry-down  remove the local registry"
 	@echo "  lint           run shellcheck on scripts/"
@@ -41,6 +43,9 @@ build:
 
 chunk:
 	scripts/15-chunk-image.sh
+
+keys:
+	scripts/22-keys.sh
 
 registry:
 	scripts/20-registry.sh up
@@ -71,6 +76,9 @@ ssh:
 
 upgrade:
 	scripts/50-upgrade-test.sh
+
+sig-test:
+	scripts/55-signature-test.sh
 
 clean:
 	rm -rf out

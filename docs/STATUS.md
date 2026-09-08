@@ -6,7 +6,7 @@ Last updated: 2026-09-08, session 2
 
 ## Current milestone
 
-M1 and M2 are done. M3 (harden) is in progress: SELinux enforcing is done. See `docs/ROADMAP.md`.
+M1 and M2 are done. M3 (harden) is in progress: SELinux enforcing and image signing are done. A public registry is left. See `docs/ROADMAP.md`.
 
 ## What works (verified, with date)
 
@@ -23,6 +23,7 @@ M1 and M2 are done. M3 (harden) is in progress: SELinux enforcing is done. See `
 - 2026-09-08: `make build` runs `rpm-ostree compose build-chunked-oci` after the podman build. The image has 65 package-aligned layers. A version bump downloads 2 layers of 63 MB instead of the whole package layer. See `docs/decisions/0002-chunked-layers-with-rpm-ostree.md`.
 - 2026-09-08: `rpm -qa` works on the booted host and lists 306 packages. The rpm database sits at `/usr/share/rpm` in rollback-journal mode.
 - 2026-09-08: `bootc status` shows `version: '1'` from the `org.opencontainers.image.version` label.
+- 2026-09-08: images are signed. `make build` creates a sigstore key pair once, `make push` signs with skopeo, the image carries the public key and a policy that rejects everything except a signed `10.0.2.2:5000/azurelinux-bootc`. `make disk` installs with `--enforce-container-sigpolicy`. `make sig-test` passes: the VM refuses an unsigned image with "A signature was required, but no signature exists" and accepts the signed one. `make upgrade` passes with signed images.
 - 2026-09-07: the Containerfile pins the base image by digest (tag `4.0.2026052700`). `make base-digest` compares the pin with the `4.0` tag. The build reuses the cached layers with the pin. The image records its package list in `/usr/lib/azurelinux-bootc/packages` (302 packages).
 
 ## What is unverified or broken
@@ -34,9 +35,9 @@ M1 and M2 are done. M3 (harden) is in progress: SELinux enforcing is done. See `
 
 ## Next action
 
-1. Sign the image with a sigstore key and verify the signature in the VM with a policy in the image.
-2. Add a CI build.
-3. M5: test package layering with rpm-ostree.
+1. Add a CI build.
+2. M5: test package layering with rpm-ostree.
+3. A public registry. Needs the user: a GitHub remote and a registry choice.
 
 ## Environment notes
 
@@ -57,4 +58,7 @@ M1 and M2 are done. M3 (harden) is in progress: SELinux enforcing is done. See `
 - The host root filesystem is nearly full. `scripts/30-install-disk.sh` removes the pulled image from the root podman store after each install. Superseded build images in the rootless store were removed by hand on 2026-09-08.
 - rpm keeps its sqlite database in WAL mode with `-shm` and `-wal` side files. Without them SQLite cannot open the database read-only, and `/usr` is read-only on the host. The Containerfile switches the database to rollback-journal mode at the end of the build.
 - `rpm-ostree compose build-chunked-oci` needs the rpm database at `usr/share/rpm` and a valid OCI layout in the output directory. `scripts/15-chunk-image.sh` seeds an empty layout on the first run.
+- The image policy rejects every source except the signed registry image and `containers-storage` for the install. The chunk step runs inside the image, so `scripts/15-chunk-image.sh` bind-mounts a permissive policy over `/etc/containers/policy.json` in that container.
+- The signature names the image `localhost:5000/azurelinux-bootc`, the name the host pushed to. The policy maps the VM's name for the registry to it with `exactRepository`.
+- Each developer has their own key pair in `out/keys/`. The public key in `config/etc/pki/containers/` is ignored by git.
 - The toolbox shares the host process table. A `pgrep -f` on the host matches the toolbox shell that runs it.

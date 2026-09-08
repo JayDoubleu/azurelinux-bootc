@@ -13,7 +13,7 @@ Goal: `make upgrade` passes. The VM pulls version 2 from the local registry, reb
 ## M3: Harden
 
 - SELinux enforcing. Done 2026-09-07.
-- Signed images with a signature policy in the image.
+- Signed images with a signature policy in the image. Done 2026-09-08.
 - A public registry with one tag per Azure Linux snapshot.
 
 ## M4: Build in CI
