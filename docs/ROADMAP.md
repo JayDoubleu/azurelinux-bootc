@@ -21,10 +21,10 @@ Goal: `make upgrade` passes. The VM pulls version 2 from the local registry, reb
 - GitHub Actions builds and pushes the image on each commit. Workflow written 2026-09-08, not yet run: the repository has no remote.
 - A boot test in CI with QEMU, if the runner supports KVM.
 
-## M5: Package layering
+## M5: Package layering (done 2026-09-08)
 
-- Verify `rpm-ostree install` on top of the bootc host.
-- Record how layered packages affect `bootc upgrade`.
+- `rpm-ostree install` works on the bootc host. Verified with `strace`.
+- A layered deployment blocks `bootc upgrade`, and `rpm-ostree upgrade` does not deploy a new image on this host. See `docs/STATUS.md`.
 
 ## Fallback: Azure Linux 3.0 with rpm-ostree
 

@@ -6,7 +6,7 @@ Last updated: 2026-09-08, session 2
 
 ## Current milestone
 
-M1 and M2 are done. M3 (harden) is in progress: SELinux enforcing and image signing are done. A public registry is left. See `docs/ROADMAP.md`.
+M1, M2 and M5 are done. M3 (harden) has SELinux enforcing and image signing; a public registry is left. M4 (CI) has a workflow that has not run yet. See `docs/ROADMAP.md`.
 
 ## What works (verified, with date)
 
@@ -25,6 +25,8 @@ M1 and M2 are done. M3 (harden) is in progress: SELinux enforcing and image sign
 - 2026-09-08: `bootc status` shows `version: '1'` from the `org.opencontainers.image.version` label.
 - 2026-09-08: `.github/workflows/build.yml` builds, chunks, signs and pushes to `ghcr.io/OWNER/azurelinux-bootc:latest` on each push to `main`. Unverified: the repository has no GitHub remote yet.
 - 2026-09-08: the build scripts remove the image a tag pointed at before, so the rootless store holds one `build` and one `dev` image.
+- 2026-09-08: package layering (M5). `rpm-ostree install strace` on the booted host pulls the package from the preview repo and stages a layered deployment. After a reboot `strace` works. `rpm-ostree reset` removes the layer and the host is bootc-compatible again. Logs: `out/logs/layering-attempt-*.txt`.
+- 2026-09-08: `bootc upgrade` after a `bootc rollback`. The rolled-back-from image stays as `cachedUpdate`; `bootc upgrade --check` compares the registry with that cache and reports "No changes" when nothing new is to download. `bootc upgrade` then deploys the cached image, and a newer registry image is fetched as usual.
 - 2026-09-08: images are signed. `make build` creates a sigstore key pair once, `make push` signs with skopeo, the image carries the public key and a policy that rejects everything except a signed `10.0.2.2:5000/azurelinux-bootc`. `make disk` installs with `--enforce-container-sigpolicy`. `make sig-test` passes: the VM refuses an unsigned image with "A signature was required, but no signature exists" and accepts the signed one. `make upgrade` passes with signed images.
 - 2026-09-07: the Containerfile pins the base image by digest (tag `4.0.2026052700`). `make base-digest` compares the pin with the `4.0` tag. The build reuses the cached layers with the pin. The image records its package list in `/usr/lib/azurelinux-bootc/packages` (302 packages).
 
@@ -33,13 +35,13 @@ M1 and M2 are done. M3 (harden) is in progress: SELinux enforcing and image sign
 - Lint warning `var-tmpfiles`: `/var` content has no tmpfiles.d entries. Deferred. ostree copies the image's `/var` into the machine's `/var` on the first deployment.
 - The packages are not pinned. The preview repo has no snapshots. The package list in the image is the record of what each build got.
 - A version bump downloads 63 MB. The initramfs, the bootupd EFI files and the version file share the one layer for files that no package owns. Splitting that layer is future work.
+- `bootc upgrade` refuses a deployment with layered packages: "Deployment contains local rpm-ostree modifications; cannot upgrade via bootc". `rpm-ostree upgrade` on this host prints "Pulling manifest" and exits 0 without a new deployment, with or without a layer, so a layered host cannot take an image update in place. Workaround: `rpm-ostree reset`, reboot, `bootc upgrade`, reboot, `rpm-ostree install` again. Open question for rpm-ostree 2026.1 on bootc 1.13.
 - A package update was not measured yet. Expected: the layers of the changed packages plus the 63 MB above.
 
 ## Next action
 
-1. M5: record the package layering results.
-2. Push the repository to GitHub and watch the first CI run. Needs the user: the remote, and optionally the three signing secrets `SIGSTORE_PRIVATE_KEY`, `SIGSTORE_PASSPHRASE`, `SIGSTORE_PUBLIC_KEY`.
-3. A public registry for the VM. Needs a policy entry for the registry name and a `bootc switch` test.
+1. Push the repository to GitHub and watch the first CI run. Needs the user: the remote, and optionally the three signing secrets `SIGSTORE_PRIVATE_KEY`, `SIGSTORE_PASSPHRASE`, `SIGSTORE_PUBLIC_KEY`.
+2. A public registry for the VM. Needs a policy entry for the registry name and a `bootc switch` test.
 
 ## Environment notes
 
@@ -63,4 +65,5 @@ M1 and M2 are done. M3 (harden) is in progress: SELinux enforcing and image sign
 - The image policy rejects every source except the signed registry image and `containers-storage` for the install. The chunk step runs inside the image, so `scripts/15-chunk-image.sh` bind-mounts a permissive policy over `/etc/containers/policy.json` in that container.
 - The signature names the image `localhost:5000/azurelinux-bootc`, the name the host pushed to. The policy maps the VM's name for the registry to it with `exactRepository`.
 - Each developer has their own key pair in `out/keys/`. The public key in `config/etc/pki/containers/` is ignored by git.
+- The VM is a throwaway. At the end of session 2 it runs version 3 with no layered packages. `make stop` stops it.
 - The toolbox shares the host process table. A `pgrep -f` on the host matches the toolbox shell that runs it.
