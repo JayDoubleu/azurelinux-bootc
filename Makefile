@@ -32,7 +32,7 @@ base-digest:
 
 lint:
 	@if command -v shellcheck >/dev/null 2>&1; then \
-	  shellcheck scripts/*.sh; \
+	  shellcheck -x scripts/*.sh; \
 	else \
 	  scripts/lint-in-container.sh; \
 	fi
