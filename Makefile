@@ -1,13 +1,14 @@
 SHELL := /bin/bash
 VERSION ?= 1
 
-.PHONY: help check base-digest lint build registry registry-down push disk run run-bg wait stop ssh upgrade clean
+.PHONY: help check base-digest lint build chunk registry registry-down push disk run run-bg wait stop ssh upgrade clean
 
 help:
 	@echo "Targets, in the order you run them:"
 	@echo "  check          verify host tools"
 	@echo "  base-digest    compare the pinned base image digest with the registry tag"
-	@echo "  build          build the bootc image (VERSION=$(VERSION))"
+	@echo "  build          build the bootc image and chunk it (VERSION=$(VERSION))"
+	@echo "  chunk          split the built image into package-aligned layers"
 	@echo "  registry       start the local OCI registry on 127.0.0.1:5000"
 	@echo "  push           push the image to the local registry"
 	@echo "  disk           write the image to out/disk.raw (run on the host with sudo)"
@@ -36,6 +37,10 @@ lint:
 
 build:
 	scripts/10-build-image.sh $(VERSION)
+	scripts/15-chunk-image.sh
+
+chunk:
+	scripts/15-chunk-image.sh
 
 registry:
 	scripts/20-registry.sh up

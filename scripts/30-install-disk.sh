@@ -44,6 +44,11 @@ podman run --rm --privileged --pid=host \
     --root-ssh-authorized-keys /output/ssh/id_ed25519.pub \
     /output/disk.raw 2>&1 | tee "$LOG_DIR/install.log"
 
+# The root image store only serves this install. Drop the image again so the store does not
+# grow by one image per install.
+podman rmi -f "$HOST_IMAGE_REF" >/dev/null
+podman image prune -f >/dev/null
+
 # Hand the output back to the user who ran sudo, so QEMU can run without root.
 if [ -n "${SUDO_UID:-}" ]; then
   chown -R "${SUDO_UID}:${SUDO_GID:-$SUDO_UID}" "$OUT_DIR"

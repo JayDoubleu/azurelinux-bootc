@@ -15,6 +15,11 @@ BASE_IMAGE_TAG="4.0"
 
 IMAGE_NAME="${IMAGE_NAME:-azurelinux-bootc}"
 IMAGE_TAG="${IMAGE_TAG:-dev}"
+# 10-build-image.sh writes IMAGE_NAME:BUILD_TAG. 15-chunk-image.sh turns it into IMAGE_NAME:IMAGE_TAG.
+BUILD_TAG="build"
+MAX_LAYERS="${MAX_LAYERS:-64}"
+CHUNKED_DIR="$OUT_DIR/chunked"
+CHUNK_TMP_DIR="$OUT_DIR/chunk-tmp"
 
 # QEMU user networking maps the host to 10.0.2.2 inside the VM.
 REGISTRY_PORT="${REGISTRY_PORT:-5000}"
@@ -23,6 +28,15 @@ REGISTRY_FROM_HOST="localhost:${REGISTRY_PORT}"
 REGISTRY_FROM_VM="10.0.2.2:${REGISTRY_PORT}"
 HOST_IMAGE_REF="${REGISTRY_FROM_HOST}/${IMAGE_NAME}:${IMAGE_TAG}"
 VM_IMAGE_REF="${REGISTRY_FROM_VM}/${IMAGE_NAME}:${IMAGE_TAG}"
+
+# Sigstore signing. 22-keys.sh creates the keys; 25-push.sh signs; the image holds the public key
+# and a policy that requires it. REGISTRIES_D marks both registry names as sigstore-attachment
+# capable, on the host for the push and in the image for the pull.
+KEY_DIR="$OUT_DIR/keys"
+SIGN_KEY="$KEY_DIR/${IMAGE_NAME}.private"
+SIGN_PASSPHRASE="$KEY_DIR/passphrase"
+SIGN_PUBKEY="$REPO_ROOT/config/etc/pki/containers/${IMAGE_NAME}.pub"
+REGISTRIES_D="$REPO_ROOT/config/etc/containers/registries.d"
 
 DISK_IMAGE="$OUT_DIR/disk.raw"
 DISK_SIZE="${DISK_SIZE:-20G}"

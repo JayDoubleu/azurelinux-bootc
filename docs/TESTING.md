@@ -5,7 +5,7 @@ The whole loop runs on the command line. No graphical console is needed.
 ## The loop
 
 ```
-make build            # 1. podman builds the image from Containerfile
+make build            # 1. podman builds the image from Containerfile, then rpm-ostree splits it into package-aligned layers
 make registry         # 2. a registry container listens on 127.0.0.1:5000
 make push             # 3. the image goes to localhost:5000/azurelinux-bootc:dev
 make disk             # 4. as root on the host: pull from the registry, `bootc install to-disk` into out/disk.raw
@@ -25,6 +25,10 @@ Step 4 needs root on the host. The script re-runs itself with `sudo`, and from a
 | VM | `10.0.2.2:5000` | n/a |
 
 QEMU user networking maps the host to `10.0.2.2` inside the VM. The image marks that registry as insecure in `config/etc/containers/registries.conf.d/`. `bootc install` records `10.0.2.2:5000/azurelinux-bootc:dev` as the image the VM upgrades from.
+
+## Layers
+
+`podman build` puts every package into one layer. `scripts/15-chunk-image.sh` runs `rpm-ostree compose build-chunked-oci` on the built image and regroups the files by package into up to 64 layers. The OCI directory `out/chunked` stays between builds so the layer boundaries stay stable. `bootc upgrade` then downloads only the layers whose packages changed.
 
 ## Versions
 

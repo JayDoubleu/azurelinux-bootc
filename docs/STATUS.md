@@ -2,7 +2,7 @@
 
 Read this first. Update it at the end of every session.
 
-Last updated: 2026-09-07, session 2
+Last updated: 2026-09-08, session 2
 
 ## Current milestone
 
@@ -20,20 +20,23 @@ M1 and M2 are done. M3 (harden) is in progress: SELinux enforcing is done. See `
 - 2026-09-07: `make upgrade` passes. The VM ran `bootc upgrade`, pulled version 2 from `10.0.2.2:5000`, rebooted into version 2 in about 16 seconds, ran `bootc rollback`, and rebooted into version 1. Logs: `out/logs/upgrade.log`, `out/logs/status-*.txt`.
 - 2026-09-07: a version bump reuses the cached package layers. The second upgrade run reported `layers already present: 9; layers needed: 2 (2.5 kB)`.
 - 2026-09-07: `make check` and `make lint` pass.
+- 2026-09-08: `make build` runs `rpm-ostree compose build-chunked-oci` after the podman build. The image has 65 package-aligned layers. A version bump downloads 2 layers of 63 MB instead of the whole package layer. See `docs/decisions/0002-chunked-layers-with-rpm-ostree.md`.
+- 2026-09-08: `rpm -qa` works on the booted host and lists 306 packages. The rpm database sits at `/usr/share/rpm` in rollback-journal mode.
+- 2026-09-08: `bootc status` shows `version: '1'` from the `org.opencontainers.image.version` label.
 - 2026-09-07: the Containerfile pins the base image by digest (tag `4.0.2026052700`). `make base-digest` compares the pin with the `4.0` tag. The build reuses the cached layers with the pin. The image records its package list in `/usr/lib/azurelinux-bootc/packages` (302 packages).
 
 ## What is unverified or broken
 
 - Lint warning `var-tmpfiles`: `/var` content has no tmpfiles.d entries. Deferred. ostree copies the image's `/var` into the machine's `/var` on the first deployment.
 - The packages are not pinned. The preview repo has no snapshots. The package list in the image is the record of what each build got.
-- A config change downloads only small layers. A package update changes the single 1.2 GB package layer and downloads all of it. Chunking with `rpm-ostree compose build-chunked-oci` (present in rpm-ostree 2026.1) is the planned fix.
+- A version bump downloads 63 MB. The initramfs, the bootupd EFI files and the version file share the one layer for files that no package owns. Splitting that layer is future work.
+- A package update was not measured yet. Expected: the layers of the changed packages plus the 63 MB above.
 
 ## Next action
 
-1. Split the image into chunked layers so a package update downloads only the changed packages.
-2. Sign the image with a sigstore key and verify the signature in the VM with a policy in the image.
-3. Add a CI build.
-4. M5: test package layering with rpm-ostree.
+1. Sign the image with a sigstore key and verify the signature in the VM with a policy in the image.
+2. Add a CI build.
+3. M5: test package layering with rpm-ostree.
 
 ## Environment notes
 
@@ -51,3 +54,7 @@ M1 and M2 are done. M3 (harden) is in progress: SELinux enforcing is done. See `
 - The base image locks root with `!unprovisioned` in `/etc/shadow`. sshd refuses a locked account even for key login. The Containerfile sets the field to `*`.
 - The QEMU serial console is a unix socket with a log file. `scripts/43-serial.sh` types into it. `scripts/42-qemu-monitor.sh` talks to the QEMU monitor.
 - There is no `bootc-base-imagectl` in the 4.0 bootc package.
+- The host root filesystem is nearly full. `scripts/30-install-disk.sh` removes the pulled image from the root podman store after each install. Superseded build images in the rootless store were removed by hand on 2026-09-08.
+- rpm keeps its sqlite database in WAL mode with `-shm` and `-wal` side files. Without them SQLite cannot open the database read-only, and `/usr` is read-only on the host. The Containerfile switches the database to rollback-journal mode at the end of the build.
+- `rpm-ostree compose build-chunked-oci` needs the rpm database at `usr/share/rpm` and a valid OCI layout in the output directory. `scripts/15-chunk-image.sh` seeds an empty layout on the first run.
+- The toolbox shares the host process table. A `pgrep -f` on the host matches the toolbox shell that runs it.

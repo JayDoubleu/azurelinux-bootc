@@ -24,6 +24,7 @@ log "booted version: $before; building version $next"
 ssh_vm bootc status > "$LOG_DIR/status-before.txt"
 
 "$REPO_ROOT/scripts/10-build-image.sh" "$next" >/dev/null
+"$REPO_ROOT/scripts/15-chunk-image.sh" >/dev/null
 "$REPO_ROOT/scripts/25-push.sh" >/dev/null
 
 log "running bootc upgrade in the VM"

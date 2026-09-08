@@ -9,6 +9,7 @@ Status: experimental. Nothing here is supported by Microsoft.
 - [bootc](https://bootc.dev) boots and updates a system from an OCI container image.
 - The image starts from the Azure Linux 4.0 preview base container and adds a kernel, bootc, ostree and a bootloader.
 - The base image is pinned by digest. `make base-digest` reports when the `4.0` tag moves. The packages come from the unpinned preview repo; the image records the installed versions in `/usr/lib/azurelinux-bootc/packages`.
+- `rpm-ostree compose build-chunked-oci` regroups the image into package-aligned layers, so an update downloads only the changed packages.
 - `bootc install to-disk` writes the image to a disk file.
 - QEMU boots the disk file with UEFI firmware.
 - A local registry serves a second image version. The VM runs `bootc upgrade`, reboots, then `bootc rollback`.

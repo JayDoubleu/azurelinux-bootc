@@ -13,6 +13,7 @@ FROM ${BASE_IMAGE}
 # 1. Packages.
 #    kernel + dracut:        boot
 #    bootc ostree bootupd:   image-based updates and bootloader updates
+#    rpm-ostree:             package layering on the host, and the layer chunking step in scripts/15-chunk-image.sh
 #    bubblewrap:             bootc runs bootupctl inside a bwrap sandbox during install
 #    grub2-efi-x64 shim-x64: UEFI boot
 #    grub2-pc-modules:       BIOS boot; a generic install writes both loaders
@@ -23,7 +24,7 @@ FROM ${BASE_IMAGE}
 COPY repos/azurelinux-preview.repo /etc/yum.repos.d/
 RUN dnf -y install \
       kernel \
-      bootc ostree bootupd composefs bubblewrap \
+      bootc ostree bootupd composefs bubblewrap rpm-ostree \
       dracut dracut-config-generic \
       systemd systemd-udev systemd-networkd systemd-resolved \
       grub2-efi-x64 grub2-tools grub2-pc-modules shim-x64 efibootmgr \
@@ -39,6 +40,14 @@ RUN dnf -y install \
 RUN cp -a /usr/share/doc/bootc/baseimage/base/. / \
     && cp -a /usr/share/doc/bootc/baseimage/dracut/. / \
     && cp -a /usr/share/doc/bootc/baseimage/systemd/. /
+
+# 2b. rpm-ostree reads the package database from /usr/share/rpm. Move it there and keep the
+#     rpm default path /usr/lib/sysimage/rpm as a symlink, as Fedora bootc images do.
+#     The chunking step in scripts/15-chunk-image.sh and package layering both need this.
+RUN set -eux; \
+    mv /usr/lib/sysimage/rpm /usr/share/rpm; \
+    ln -s ../../share/rpm /usr/lib/sysimage/rpm; \
+    rpm -qa | wc -l
 
 # 3. Machine-local directories live under /var. The image holds symlinks to them.
 RUN set -eux; \
@@ -95,11 +104,16 @@ RUN set -eux; \
     echo "${VERSION}" > /usr/lib/azurelinux-bootc/version; \
     rpm -qa --qf '%{NAME}-%{EVR}.%{ARCH}\n' | sort > /usr/lib/azurelinux-bootc/packages
 
-# 7. Drop build leftovers, then lint. `ostree container commit` is not used: it needs an
+# 7. Drop build leftovers, then lint. rpm leaves its sqlite database in WAL mode with -shm and
+#    -wal side files. SQLite cannot open a WAL database read-only without them, and the booted
+#    system has a read-only /usr. Switch the database to rollback-journal mode, which needs
+#    no side files, so `rpm -qa` works on the host. `ostree container commit` is not used: it needs an
 #    ostree repo marker that only rpm-ostree-composed images carry. ostree copies the
 #    image's /var into the machine's /var on the first deployment.
 RUN set -eux; \
     rm -rf /var/cache/* /var/log/* /var/tmp/* /var/lib/dnf/* /tmp/*; \
+    python3 -c "import sqlite3; c = sqlite3.connect('/usr/share/rpm/rpmdb.sqlite'); assert c.execute('PRAGMA journal_mode=DELETE').fetchone()[0] == 'delete'; c.close()"; \
+    rm -f /usr/share/rpm/rpmdb.sqlite-shm /usr/share/rpm/rpmdb.sqlite-wal; \
     find /boot -mindepth 1 -delete; \
     find /run -mindepth 1 -maxdepth 1 ! -name .containerenv ! -name secrets -exec rm -rf {} +
 RUN bootc container lint
@@ -108,3 +122,4 @@ LABEL containers.bootc=1
 LABEL org.opencontainers.image.title="Azure Linux bootc"
 LABEL org.opencontainers.image.description="Azure Linux 4.0 preview as a bootable container image"
 LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.version="${VERSION}"
