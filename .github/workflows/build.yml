@@ -14,11 +14,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      # The push goes to ghcr.io/OWNER/azurelinux-bootc:latest.
-      REGISTRY_FROM_HOST: ghcr.io/${{ github.repository_owner }}
       IMAGE_TAG: latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Registry path
+        # The push goes to ghcr.io/OWNER/azurelinux-bootc:latest. ghcr.io wants the owner in lowercase.
+        run: echo "REGISTRY_FROM_HOST=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
 
       - name: Install podman and skopeo
         run: |
