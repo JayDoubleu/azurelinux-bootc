@@ -19,7 +19,7 @@ See `docs/ROADMAP.md` for milestones and `docs/decisions/` for why we chose this
 
 ## CI
 
-`.github/workflows/build.yml` builds, chunks, signs and pushes the image to `ghcr.io/OWNER/azurelinux-bootc:latest` on each push to `main`. Set the secrets `SIGSTORE_PRIVATE_KEY`, `SIGSTORE_PASSPHRASE` and `SIGSTORE_PUBLIC_KEY` from `out/keys/` and `config/etc/pki/containers/` to sign with a fixed key. Without them each run signs with a throwaway key.
+`.github/workflows/build.yml` builds, chunks, signs and pushes the image to `ghcr.io/jaydoubleu/azurelinux-bootc:latest` on each push to `main`. The image policy trusts that name with the same key. Set the secrets `SIGSTORE_PRIVATE_KEY`, `SIGSTORE_PASSPHRASE` and `SIGSTORE_PUBLIC_KEY` from `out/keys/` and `config/etc/pki/containers/` to sign with a fixed key. Without them each run signs with a throwaway key.
 
 ## Requirements
 

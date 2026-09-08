@@ -6,7 +6,7 @@ Last updated: 2026-09-08, session 2
 
 ## Current milestone
 
-M1, M2 and M5 are done. M3 (harden) has SELinux enforcing and image signing; a public registry is left. M4 (CI) has a workflow that has not run yet. See `docs/ROADMAP.md`.
+M1, M2, M4 and M5 are done. M3 (harden) has SELinux enforcing, image signing, and a signed image on ghcr.io; the `bootc switch` test from the VM to ghcr.io is left. See `docs/ROADMAP.md`.
 
 ## What works (verified, with date)
 
@@ -23,7 +23,8 @@ M1, M2 and M5 are done. M3 (harden) has SELinux enforcing and image signing; a p
 - 2026-09-08: `make build` runs `rpm-ostree compose build-chunked-oci` after the podman build. The image has 65 package-aligned layers. A version bump downloads 2 layers of 63 MB instead of the whole package layer. See `docs/decisions/0002-chunked-layers-with-rpm-ostree.md`.
 - 2026-09-08: `rpm -qa` works on the booted host and lists 306 packages. The rpm database sits at `/usr/share/rpm` in rollback-journal mode.
 - 2026-09-08: `bootc status` shows `version: '1'` from the `org.opencontainers.image.version` label.
-- 2026-09-08: `.github/workflows/build.yml` builds, chunks, signs and pushes to `ghcr.io/OWNER/azurelinux-bootc:latest` on each push to `main`. Unverified: the repository has no GitHub remote yet.
+- 2026-09-08: the repository is `github.com/JayDoubleu/azurelinux-bootc` (private). Both workflows pass on `main`: `lint` in 16 s, `build` in about 4.5 min. The build pushes `ghcr.io/jaydoubleu/azurelinux-bootc:latest`, signed with the key from the repository secrets, which is the same key as `out/keys/` on this machine. The package is private, like the repository.
+- 2026-09-08: the image policy trusts `ghcr.io/jaydoubleu/azurelinux-bootc` with that key. The VM runs version 4 with this policy and resolves ghcr.io.
 - 2026-09-08: the build scripts remove the image a tag pointed at before, so the rootless store holds one `build` and one `dev` image.
 - 2026-09-08: package layering (M5). `rpm-ostree install strace` on the booted host pulls the package from the preview repo and stages a layered deployment. After a reboot `strace` works. `rpm-ostree reset` removes the layer and the host is bootc-compatible again. Logs: `out/logs/layering-attempt-*.txt`.
 - 2026-09-08: `bootc upgrade` after a `bootc rollback`. The rolled-back-from image stays as `cachedUpdate`; `bootc upgrade --check` compares the registry with that cache and reports "No changes" when nothing new is to download. `bootc upgrade` then deploys the cached image, and a newer registry image is fetched as usual.
@@ -40,8 +41,8 @@ M1, M2 and M5 are done. M3 (harden) has SELinux enforcing and image signing; a p
 
 ## Next action
 
-1. Push the repository to GitHub and watch the first CI run. Needs the user: the remote, and optionally the three signing secrets `SIGSTORE_PRIVATE_KEY`, `SIGSTORE_PASSPHRASE`, `SIGSTORE_PUBLIC_KEY`.
-2. A public registry for the VM. Needs a policy entry for the registry name and a `bootc switch` test.
+1. `bootc switch --enforce-container-sigpolicy ghcr.io/jaydoubleu/azurelinux-bootc:latest` from the VM. Blocked: the package is private and the `gh` token lacks `read:packages`. Either the user runs `gh auth refresh -h github.com -s read:packages`, and the token goes into `/etc/ostree/auth.json` in the VM only, or the user makes the package public on github.com.
+2. After the switch works: a `make switch-test` script, and a note in `docs/TESTING.md` on `auth.json` for private packages.
 
 ## Environment notes
 
@@ -66,4 +67,7 @@ M1, M2 and M5 are done. M3 (harden) has SELinux enforcing and image signing; a p
 - The signature names the image `localhost:5000/azurelinux-bootc`, the name the host pushed to. The policy maps the VM's name for the registry to it with `exactRepository`.
 - Each developer has their own key pair in `out/keys/`. The public key in `config/etc/pki/containers/` is ignored by git.
 - The VM is a throwaway. At the end of session 2 it runs version 3 with no layered packages. `make stop` stops it.
+- CI runs on Ubuntu 24.04. Three runner fixes: `shellcheck -x -P SCRIPTDIR` so sourced files resolve from the repository root; `kernel.apparmor_restrict_unprivileged_userns=0` so skopeo can write the rootless image store; the ghcr.io path in lowercase.
+- `grep --exclude-dir` matches directory names, not paths. The local `grep` is an alias for `ugrep`, which behaves differently, so test grep flags in CI, not locally.
+- An empty private repository `an unused repository` from 2026-09-07 is unused.
 - The toolbox shares the host process table. A `pgrep -f` on the host matches the toolbox shell that runs it.

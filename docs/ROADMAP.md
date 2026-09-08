@@ -14,11 +14,11 @@ Goal: `make upgrade` passes. The VM pulls version 2 from the local registry, reb
 
 - SELinux enforcing. Done 2026-09-07.
 - Signed images with a signature policy in the image. Done 2026-09-08.
-- A public registry with one tag per Azure Linux snapshot.
+- A registry outside the test host. Signed image on ghcr.io since 2026-09-08; the `bootc switch` test from the VM is pending. One tag per Azure Linux snapshot is future work.
 
-## M4: Build in CI
+## M4: Build in CI (done 2026-09-08)
 
-- GitHub Actions builds and pushes the image on each commit. Workflow written 2026-09-08, not yet run: the repository has no remote.
+- GitHub Actions builds, chunks, signs and pushes `ghcr.io/jaydoubleu/azurelinux-bootc:latest` on each push to `main`.
 - A boot test in CI with QEMU, if the runner supports KVM.
 
 ## M5: Package layering (done 2026-09-08)
