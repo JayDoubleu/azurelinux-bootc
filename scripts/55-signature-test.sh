@@ -36,4 +36,5 @@ log "pushing the signed image again"
 ssh_vm bootc upgrade --check > "$LOG_DIR/signature-signed.log" 2>&1 \
   || { cat "$LOG_DIR/signature-signed.log"; die "FAIL: the VM rejected the signed image"; }
 log "signed image accepted: $(head -n 1 "$LOG_DIR/signature-signed.log")"
+host podman rmi "$unsigned_ref" >/dev/null 2>&1 || true
 log "PASS: signature verification"

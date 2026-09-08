@@ -18,7 +18,7 @@ Goal: `make upgrade` passes. The VM pulls version 2 from the local registry, reb
 
 ## M4: Build in CI
 
-- GitHub Actions builds and pushes the image on each commit.
+- GitHub Actions builds and pushes the image on each commit. Workflow written 2026-09-08, not yet run: the repository has no remote.
 - A boot test in CI with QEMU, if the runner supports KVM.
 
 ## M5: Package layering

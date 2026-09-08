@@ -12,10 +12,16 @@ if [ ! -f "$SIGN_KEY" ] || [ ! -f "$SIGN_PUBKEY" ]; then
 fi
 
 version="${1:-1}"
+old_id="$(host podman image inspect --format '{{.Id}}' "${IMAGE_NAME}:${BUILD_TAG}" 2>/dev/null || true)"
 log "building ${IMAGE_NAME}:${BUILD_TAG} with VERSION=${version}"
 host podman build \
   --build-arg "VERSION=${version}" \
   -t "${IMAGE_NAME}:${BUILD_TAG}" \
   -f "$REPO_ROOT/Containerfile" \
   "$REPO_ROOT" 2>&1 | tee "$LOG_DIR/build-v${version}.log"
+# Remove the image the tag pointed at before, unless it still has a tag. Keeps the store bounded.
+new_id="$(host podman image inspect --format '{{.Id}}' "${IMAGE_NAME}:${BUILD_TAG}")"
+if [ -n "$old_id" ] && [ "$old_id" != "$new_id" ]; then
+  host podman rmi "$old_id" >/dev/null 2>&1 || true
+fi
 log "built ${IMAGE_NAME}:${BUILD_TAG} (VERSION=${version})"

@@ -24,10 +24,16 @@ CHUNK_TMP_DIR="$OUT_DIR/chunk-tmp"
 # QEMU user networking maps the host to 10.0.2.2 inside the VM.
 REGISTRY_PORT="${REGISTRY_PORT:-5000}"
 REGISTRY_NAME="azl-registry"
-REGISTRY_FROM_HOST="localhost:${REGISTRY_PORT}"
+# REGISTRY_FROM_HOST can point at a public registry, for example ghcr.io/OWNER in CI.
+REGISTRY_FROM_HOST="${REGISTRY_FROM_HOST:-localhost:${REGISTRY_PORT}}"
 REGISTRY_FROM_VM="10.0.2.2:${REGISTRY_PORT}"
 HOST_IMAGE_REF="${REGISTRY_FROM_HOST}/${IMAGE_NAME}:${IMAGE_TAG}"
 VM_IMAGE_REF="${REGISTRY_FROM_VM}/${IMAGE_NAME}:${IMAGE_TAG}"
+# TLS is off only for the local registry.
+case "$REGISTRY_FROM_HOST" in
+  localhost:*|127.0.0.1:*) PUSH_TLS_VERIFY=false ;;
+  *) PUSH_TLS_VERIFY=true ;;
+esac
 
 # Sigstore signing. 22-keys.sh creates the keys; 25-push.sh signs; the image holds the public key
 # and a policy that requires it. REGISTRIES_D marks both registry names as sigstore-attachment

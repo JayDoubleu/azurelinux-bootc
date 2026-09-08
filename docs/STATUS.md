@@ -23,6 +23,8 @@ M1 and M2 are done. M3 (harden) is in progress: SELinux enforcing and image sign
 - 2026-09-08: `make build` runs `rpm-ostree compose build-chunked-oci` after the podman build. The image has 65 package-aligned layers. A version bump downloads 2 layers of 63 MB instead of the whole package layer. See `docs/decisions/0002-chunked-layers-with-rpm-ostree.md`.
 - 2026-09-08: `rpm -qa` works on the booted host and lists 306 packages. The rpm database sits at `/usr/share/rpm` in rollback-journal mode.
 - 2026-09-08: `bootc status` shows `version: '1'` from the `org.opencontainers.image.version` label.
+- 2026-09-08: `.github/workflows/build.yml` builds, chunks, signs and pushes to `ghcr.io/OWNER/azurelinux-bootc:latest` on each push to `main`. Unverified: the repository has no GitHub remote yet.
+- 2026-09-08: the build scripts remove the image a tag pointed at before, so the rootless store holds one `build` and one `dev` image.
 - 2026-09-08: images are signed. `make build` creates a sigstore key pair once, `make push` signs with skopeo, the image carries the public key and a policy that rejects everything except a signed `10.0.2.2:5000/azurelinux-bootc`. `make disk` installs with `--enforce-container-sigpolicy`. `make sig-test` passes: the VM refuses an unsigned image with "A signature was required, but no signature exists" and accepts the signed one. `make upgrade` passes with signed images.
 - 2026-09-07: the Containerfile pins the base image by digest (tag `4.0.2026052700`). `make base-digest` compares the pin with the `4.0` tag. The build reuses the cached layers with the pin. The image records its package list in `/usr/lib/azurelinux-bootc/packages` (302 packages).
 
@@ -35,9 +37,9 @@ M1 and M2 are done. M3 (harden) is in progress: SELinux enforcing and image sign
 
 ## Next action
 
-1. Add a CI build.
-2. M5: test package layering with rpm-ostree.
-3. A public registry. Needs the user: a GitHub remote and a registry choice.
+1. M5: record the package layering results.
+2. Push the repository to GitHub and watch the first CI run. Needs the user: the remote, and optionally the three signing secrets `SIGSTORE_PRIVATE_KEY`, `SIGSTORE_PASSPHRASE`, `SIGSTORE_PUBLIC_KEY`.
+3. A public registry for the VM. Needs a policy entry for the registry name and a `bootc switch` test.
 
 ## Environment notes
 

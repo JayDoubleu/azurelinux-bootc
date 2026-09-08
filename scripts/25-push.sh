@@ -11,7 +11,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 [ -f "$SIGN_KEY" ] || die "no signing key at $SIGN_KEY; run: make keys"
 
 host skopeo --registries.d "$REGISTRIES_D" copy \
-  --dest-tls-verify=false \
+  --dest-tls-verify="$PUSH_TLS_VERIFY" \
   --sign-by-sigstore-private-key "$SIGN_KEY" \
   --sign-passphrase-file "$SIGN_PASSPHRASE" \
   "containers-storage:localhost/${IMAGE_NAME}:${IMAGE_TAG}" \
