@@ -1,5 +1,9 @@
 {
-  "default": [{"type": "reject"}],
+  "default": [
+    {
+      "type": "reject"
+    }
+  ],
   "transports": {
     "docker": {
       "10.0.2.2:5000/azurelinux-bootc": [
@@ -11,10 +15,20 @@
             "dockerRepository": "localhost:5000/azurelinux-bootc"
           }
         }
+      ],
+      "ghcr.io/jaydoubleu/azurelinux-bootc": [
+        {
+          "type": "sigstoreSigned",
+          "keyPath": "/etc/pki/containers/azurelinux-bootc.pub"
+        }
       ]
     },
     "containers-storage": {
-      "": [{"type": "insecureAcceptAnything"}]
+      "": [
+        {
+          "type": "insecureAcceptAnything"
+        }
+      ]
     }
   }
 }
