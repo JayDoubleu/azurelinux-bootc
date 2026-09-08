@@ -12,7 +12,7 @@ jobs:
       - name: Install shellcheck
         run: sudo apt-get update && sudo apt-get install -y shellcheck
       - name: Run shellcheck
-        run: shellcheck -x scripts/*.sh
+        run: shellcheck -x -P SCRIPTDIR scripts/*.sh
       - name: Check for em-dashes
         run: |
           if grep -rIl $'\xe2\x80\x94' --exclude-dir=.git --exclude-dir=docs/research .; then

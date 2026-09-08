@@ -9,4 +9,4 @@ for f in "$REPO_ROOT"/scripts/*.sh; do
 done
 
 host podman run --rm -v "$REPO_ROOT/scripts:/mnt:ro,Z" \
-  docker.io/koalaman/shellcheck:stable -x "${files[@]}"
+  docker.io/koalaman/shellcheck:stable -x -P SCRIPTDIR "${files[@]}"
