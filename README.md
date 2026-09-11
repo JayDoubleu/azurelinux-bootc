@@ -42,6 +42,8 @@ make push        # push the image to the local registry
 make disk        # write the image to out/disk.raw (re-runs itself with sudo on the host)
 make run         # boot out/disk.raw in QEMU on the command line
 make upgrade     # build v2, push it, upgrade the VM, verify, roll back
+make sig-test    # check that the VM refuses an unsigned image
+make switch      # move the VM to the signed image on ghcr.io
 ```
 
 Each target is a script in `scripts/`. Read the script before you run it.

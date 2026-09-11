@@ -10,11 +10,11 @@ Done when: `bootc status` in the VM shows the booted image, and `cat /usr/lib/az
 
 Goal: `make upgrade` passes. The VM pulls version 2 from the local registry, reboots into it, then rolls back to version 1.
 
-## M3: Harden
+## M3: Harden (done 2026-09-12)
 
 - SELinux enforcing. Done 2026-09-07.
 - Signed images with a signature policy in the image. Done 2026-09-08.
-- A registry outside the test host. Signed image on ghcr.io since 2026-09-08; the `bootc switch` test from the VM is pending. One tag per Azure Linux snapshot is future work.
+- A registry outside the test host. The VM boots the signed image from ghcr.io since 2026-09-12. One tag per Azure Linux snapshot is future work.
 
 ## M4: Build in CI (done 2026-09-08)
 

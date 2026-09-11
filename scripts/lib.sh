@@ -29,6 +29,8 @@ REGISTRY_FROM_HOST="${REGISTRY_FROM_HOST:-localhost:${REGISTRY_PORT}}"
 REGISTRY_FROM_VM="10.0.2.2:${REGISTRY_PORT}"
 HOST_IMAGE_REF="${REGISTRY_FROM_HOST}/${IMAGE_NAME}:${IMAGE_TAG}"
 VM_IMAGE_REF="${REGISTRY_FROM_VM}/${IMAGE_NAME}:${IMAGE_TAG}"
+# The image that CI pushes. 60-switch-test.sh moves the VM to it.
+GHCR_IMAGE_REF="${GHCR_IMAGE_REF:-ghcr.io/jaydoubleu/${IMAGE_NAME}:latest}"
 # TLS is off only for the local registry.
 case "$REGISTRY_FROM_HOST" in
   localhost:*|127.0.0.1:*) PUSH_TLS_VERIFY=false ;;

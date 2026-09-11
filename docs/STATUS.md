@@ -2,11 +2,11 @@
 
 Read this first. Update it at the end of every session.
 
-Last updated: 2026-09-08, session 2
+Last updated: 2026-09-12, session 3
 
 ## Current milestone
 
-M1, M2, M4 and M5 are done. M3 (harden) has SELinux enforcing, image signing, and a signed image on ghcr.io; the `bootc switch` test from the VM to ghcr.io is left. See `docs/ROADMAP.md`.
+M1 to M5 are done. The VM boots the signed CI image from ghcr.io. What is left is in the open issues and in the Future section of `docs/ROADMAP.md`.
 
 ## What works (verified, with date)
 
@@ -28,6 +28,7 @@ M1, M2, M4 and M5 are done. M3 (harden) has SELinux enforcing, image signing, an
 - 2026-09-08: the build scripts remove the image a tag pointed at before, so the rootless store holds one `build` and one `dev` image.
 - 2026-09-08: package layering (M5). `rpm-ostree install strace` on the booted host pulls the package from the preview repo and stages a layered deployment. After a reboot `strace` works. `rpm-ostree reset` removes the layer and the host is bootc-compatible again. Logs: `out/logs/layering-attempt-*.txt`.
 - 2026-09-08: `bootc upgrade` after a `bootc rollback`. The rolled-back-from image stays as `cachedUpdate`; `bootc upgrade --check` compares the registry with that cache and reports "No changes" when nothing new is to download. `bootc upgrade` then deploys the cached image, and a newer registry image is fetched as usual.
+- 2026-09-12: `make switch` passes. `bootc switch --enforce-container-sigpolicy ghcr.io/jaydoubleu/azurelinux-bootc:latest` on the VM needed 5 of 65 layers (81.9 MB): the chunk step gave the CI build and the local build 60 identical layers. After the reboot the VM runs version 5 from ghcr.io, enforcing, signature checked by the policy, no failed unit, and `bootc upgrade --check` works against ghcr.io. The private package is read with a `read:packages` token in `/etc/ostree/auth.json`.
 - 2026-09-08: images are signed. `make build` creates a sigstore key pair once, `make push` signs with skopeo, the image carries the public key and a policy that rejects everything except a signed `10.0.2.2:5000/azurelinux-bootc`. `make disk` installs with `--enforce-container-sigpolicy`. `make sig-test` passes: the VM refuses an unsigned image with "A signature was required, but no signature exists" and accepts the signed one. `make upgrade` passes with signed images.
 - 2026-09-07: the Containerfile pins the base image by digest (tag `4.0.2026052700`). `make base-digest` compares the pin with the `4.0` tag. The build reuses the cached layers with the pin. The image records its package list in `/usr/lib/azurelinux-bootc/packages` (302 packages).
 
@@ -41,8 +42,10 @@ M1, M2, M4 and M5 are done. M3 (harden) has SELinux enforcing, image signing, an
 
 ## Next action
 
-1. `bootc switch --enforce-container-sigpolicy ghcr.io/jaydoubleu/azurelinux-bootc:latest` from the VM. Blocked: the package is private and the `gh` token lacks `read:packages`. Either the user runs `gh auth refresh -h github.com -s read:packages`, and the token goes into `/etc/ostree/auth.json` in the VM only, or the user makes the package public on github.com.
-2. After the switch works: a `make switch-test` script, and a note in `docs/TESTING.md` on `auth.json` for private packages.
+1. Split the 63 MB layer of unpackaged files, so a version bump downloads less than the initramfs.
+2. Find out why `rpm-ostree upgrade` deploys nothing on this host.
+3. One tag per Azure Linux snapshot on ghcr.io, once the preview repo settles.
+4. Future work from `docs/ROADMAP.md`: desktop environment, Flatpak, aarch64, Azure VM image.
 
 ## Environment notes
 
@@ -66,7 +69,7 @@ M1, M2, M4 and M5 are done. M3 (harden) has SELinux enforcing, image signing, an
 - The image policy rejects every source except the signed registry image and `containers-storage` for the install. The chunk step runs inside the image, so `scripts/15-chunk-image.sh` bind-mounts a permissive policy over `/etc/containers/policy.json` in that container.
 - The signature names the image `localhost:5000/azurelinux-bootc`, the name the host pushed to. The policy maps the VM's name for the registry to it with `exactRepository`.
 - Each developer has their own key pair in `out/keys/`. The public key in `config/etc/pki/containers/` is ignored by git.
-- The VM is a throwaway. At the end of session 2 it runs version 3 with no layered packages. `make stop` stops it.
+- The VM is a throwaway. At the end of session 3 it runs version 5 from ghcr.io. `make stop` stops it. A host reboot stops it too; `make run-bg` starts it again from `out/disk.raw`.
 - CI runs on Ubuntu 24.04. Three runner fixes: `shellcheck -x -P SCRIPTDIR` so sourced files resolve from the repository root; `kernel.apparmor_restrict_unprivileged_userns=0` so skopeo can write the rootless image store; the ghcr.io path in lowercase.
 - `grep --exclude-dir` matches directory names, not paths. The local `grep` is an alias for `ugrep`, which behaves differently, so test grep flags in CI, not locally.
 - An empty private repository `an unused repository` from 2026-09-07 is unused.

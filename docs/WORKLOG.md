@@ -43,3 +43,10 @@ Append one entry per session. Newest at the bottom. Keep each entry short: what 
 - Wrote decision 0003 for the signing design. The VM ends the session on version 3.
 - Created the private repository `JayDoubleu/azurelinux-bootc`, set the three signing secrets from the local key, and pushed. Four CI fixes in a row: `shellcheck -x -P SCRIPTDIR`, the AppArmor user namespace sysctl for skopeo on Ubuntu 24.04, the lowercase ghcr.io path, and `--exclude-dir=research` for the em-dash check. Both workflows pass. The signed image is at `ghcr.io/jaydoubleu/azurelinux-bootc:latest`, private.
 - Added the ghcr.io scope to the image policy. The VM runs version 4 with it. The `bootc switch` test waits for a token with `read:packages` or a public package.
+
+## 2026-09-12, session 3
+
+- The user added `read:packages` to the `gh` token. The host had rebooted, so the VM was down; `make run-bg` brought it back on version 4.
+- Wrote the token to `/etc/ostree/auth.json` in the VM and ran `bootc switch --enforce-container-sigpolicy ghcr.io/jaydoubleu/azurelinux-bootc:latest`. Only 5 of 65 layers (81.9 MB) were new. The VM booted version 5 from ghcr.io, enforcing, with the signature checked.
+- Added `scripts/60-switch-test.sh` and `make switch`. It writes the auth file from `gh auth token`, switches, reboots and verifies. Ran it once: PASS.
+- M1 to M5 are done. Open: the 63 MB unpackaged layer, `rpm-ostree upgrade` on this host, dated tags.

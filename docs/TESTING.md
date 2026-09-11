@@ -13,6 +13,7 @@ make run-bg           # 5. QEMU boots out/disk.raw with OVMF; serial output goes
 make ssh              # 6. ssh root@localhost -p 2222 with out/ssh/id_ed25519
 make upgrade          # 7. build v2, push, `bootc upgrade`, reboot, verify, `bootc rollback`, reboot, verify
 make sig-test         # 7b. push an unsigned image, expect `bootc upgrade --check` to fail, push signed, expect pass
+make switch           # 7c. move the VM to the signed image on ghcr.io, reboot, verify
 make stop             # 8. stop the VM
 ```
 
@@ -38,6 +39,12 @@ The first `make build` runs `scripts/22-keys.sh`. It creates a sigstore key pair
 `make push` signs the image with the private key. The signature is stored in the registry next to the image. `config/etc/containers/policy.json` in the image rejects every image by default and accepts `10.0.2.2:5000/azurelinux-bootc` only with a valid signature from that key. The signature names the image `localhost:5000/azurelinux-bootc`, the name the host pushed to, so the policy maps the VM's name for the registry to it with `exactRepository`.
 
 `make disk` installs with `--enforce-container-sigpolicy`. `make sig-test` checks both directions: an unsigned image is refused, the signed image is accepted.
+
+## Switching to ghcr.io
+
+CI pushes `ghcr.io/jaydoubleu/azurelinux-bootc:latest`, signed with the key from the repository secrets. The image policy trusts that name with the same key. `make switch` runs `bootc switch --enforce-container-sigpolicy` on the VM, reboots it, and checks the booted image, the version and the SELinux mode.
+
+The package is private while the repository is private. A private package needs a token with the `read:packages` scope. The script takes the token from `gh auth token`, and writes it to `/etc/ostree/auth.json` in the VM with mode 600. The token is machine-local state under `/etc`; it is not in the image and not in the logs. To add the scope: `gh auth refresh -h github.com -s read:packages`.
 
 ## Versions
 
