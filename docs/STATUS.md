@@ -48,6 +48,13 @@ M1 to M5 are done. The VM boots the signed CI image from ghcr.io. What is left i
 1. rpm-ostree 2026.2 or later in the image, once Azure Linux 4.0 packages it, so `rpm-ostree upgrade` works on layered hosts without the digest rebase.
 2. Future work from `docs/ROADMAP.md`: desktop environment, Flatpak, aarch64, Azure VM image.
 
+## TODO for the user
+
+- Delete the empty repository `an unused repository`, or keep it.
+- Test the VHD from `make vhd` on Azure. Needs a subscription.
+- Decide whether the desktop environment and Flatpak go on the roadmap. Both need packaging work in Azure Linux 4.0 first.
+- The ghcr.io package stays private for now (decided 2026-09-12). The VM keeps the token in `/etc/ostree/auth.json`.
+
 ## Environment notes
 
 - Claude runs in a Fedora toolbox. Scripts call host tools with `flatpak-spawn --host`.
