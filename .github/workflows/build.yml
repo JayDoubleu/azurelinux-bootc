@@ -3,7 +3,16 @@ name: build
 on:
   push:
     branches: [main]
+    paths-ignore: &docs
+      - 'docs/**'
+      - '**/*.md'
+      - 'LICENSE'
+      - '.editorconfig'
+      - '.gitignore'
+      - '.github/dependabot.yml'
+      - '.github/workflows/lint.yml'
   pull_request:
+    paths-ignore: *docs
   workflow_dispatch:
 
 permissions:
