@@ -65,3 +65,4 @@ Append one entry per session. Newest at the bottom. Keep each entry short: what 
 - The repository is public since 2026-09-12. The arm64 CI job moved to the native `ubuntu-24.04-arm` runner, without the emulation step, and gained a `make disk` probe that does not fail the job.
 - The native arm64 runner builds in 6.7 minutes and `make disk` completes there. Opened issue #1 to track the rpm-ostree fix with links to the upstream issue and pull request. The build workflow now ignores docs-only changes.
 - The arm64 disk booted under TCG on the native runner in 3 minutes 40 seconds, enforcing, version 29. Promoted the probe to the full loop: `SSH_WAIT` in `scripts/lib.sh` sets the ssh wait, 1500 seconds on arm64.
+- The arm64 job passes the full loop on the native runner in 29 minutes: upgrade, rollback and signature test under TCG. One fix on the way: the container probe used the x86_64 tag.

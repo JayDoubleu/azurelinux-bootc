@@ -6,7 +6,7 @@ Last updated: 2026-09-12
 
 ## Current milestone
 
-M1 to M5 are done. The VM boots the signed CI image from ghcr.io. What is left is in the open issues and in the Future section of `docs/ROADMAP.md`.
+M1 to M5 are done, the repository is public, and CI runs the full test loop for x86_64 under KVM and for aarch64 under TCG. What is left is in the open issues and in the Future section of `docs/ROADMAP.md`.
 
 ## What works (verified, with date)
 
@@ -37,7 +37,7 @@ M1 to M5 are done. The VM boots the signed CI image from ghcr.io. What is left i
 
 - 2026-09-12: the QEMU loop runs in CI. On the `ubuntu-24.04` runner the x86_64 job builds, chunks, signs, installs to a disk, boots under KVM, checks `bootc status`, SELinux and the version, runs the upgrade and rollback test and the signature test, and pushes to ghcr.io, in 15 minutes. The arm64 job builds under emulation in 32 minutes. Actions are pinned by commit and Dependabot bumps them.
 - 2026-09-12: the repository is public. The build workflow skips changes to docs only.
-- 2026-09-12: the arm64 CI job runs on the native `ubuntu-24.04-arm` runner. `bootc install to-disk` completes natively, and the disk boots under same-architecture TCG in 3 minutes 40 seconds: `aarch64`, SELinux enforcing, `bootc status` fine. The job took 10 minutes with the boot probe. The full loop (upgrade, rollback, signature test) now runs there too; result pending.
+- 2026-09-12: the arm64 CI job runs on the native `ubuntu-24.04-arm` runner. `bootc install to-disk` completes natively, and the disk boots under same-architecture TCG in 3 minutes 40 seconds: `aarch64`, SELinux enforcing, `bootc status` fine. The full loop runs there too: install, boot, upgrade, rollback and signature test pass in 29 minutes, and a version bump downloads 2 layers of 1.8 MB.
 - 2026-09-12: the aarch64 image builds in CI under emulation in 34 minutes and is on ghcr.io as `latest-arm64`, `v<run>-arm64` and `<date>-arm64`: architecture `arm64`, 65 layers, version 13. The Containerfile picks `grub2-efi-aa64 shim-aa64` from `TARGETARCH`.
 
 ## What is unverified or broken
