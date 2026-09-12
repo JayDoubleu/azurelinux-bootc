@@ -143,7 +143,7 @@ jobs:
         run: |
           podman unshare cat /proc/self/uid_map
           podman info --format '{{.Host.OCIRuntime.Name}} {{.Host.OCIRuntime.Version}}'
-          podman run --rm localhost/azurelinux-bootc:dev true && echo 'container start ok'
+          podman run --rm "localhost/azurelinux-bootc:dev${{ matrix.suffix }}" true && echo 'container start ok'
 
       - name: Local registry and signed push
         if: matrix.test
