@@ -112,7 +112,11 @@ RUN set -eux; \
 # 7. Drop build leftovers, then lint. rpm leaves its sqlite database in WAL mode with -shm and
 #    -wal side files. SQLite cannot open a WAL database read-only without them, and the booted
 #    system has a read-only /usr. Switch the database to rollback-journal mode, which needs
-#    no side files, so `rpm -qa` works on the host. `ostree container commit` is not used: it needs an
+#    no side files, so `rpm -qa` works on the host.
+#    The user.component xattrs steer the chunk step: rpm-ostree puts every marked path into its
+#    own layer. The commit moves /etc to /usr/etc, so each file is marked, not only the directory. Without them the version file, /etc and the bootupd files
+#    share the 60 MB layer that holds the initramfs, and every version bump downloads it.
+#    `ostree container commit` is not used: it needs an
 #    ostree repo marker that only rpm-ostree-composed images carry. ostree copies the
 #    image's /var into the machine's /var on the first deployment.
 RUN set -eux; \
@@ -120,7 +124,8 @@ RUN set -eux; \
     python3 -c "import sqlite3; c = sqlite3.connect('/usr/share/rpm/rpmdb.sqlite'); assert c.execute('PRAGMA journal_mode=DELETE').fetchone()[0] == 'delete'; c.close()"; \
     rm -f /usr/share/rpm/rpmdb.sqlite-shm /usr/share/rpm/rpmdb.sqlite-wal; \
     find /boot -mindepth 1 -delete; \
-    find /run -mindepth 1 -maxdepth 1 ! -name .containerenv ! -name secrets -exec rm -rf {} +
+    find /run -mindepth 1 -maxdepth 1 ! -name .containerenv ! -name secrets -exec rm -rf {} +; \
+    python3 -c "import os; [os.setxattr(n, 'user.component', c.encode()) for p, c in [('/usr/lib/azurelinux-bootc', 'azurelinux-bootc'), ('/etc', 'etc'), ('/usr/lib/efi', 'bootupd'), ('/usr/lib/bootupd', 'bootupd')] if os.path.isdir(p) for root, dirs, files in os.walk(p) for n in [root] + [os.path.join(root, f) for f in files] if not os.path.islink(n)]"
 RUN bootc container lint
 
 LABEL containers.bootc=1
