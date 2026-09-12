@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 VERSION ?= 1
 
-.PHONY: help check base-digest lint build chunk keys registry registry-down push disk run run-bg wait stop ssh upgrade sig-test switch clean
+.PHONY: help check base-digest lint build chunk keys registry registry-down push disk run run-bg wait stop ssh upgrade sig-test switch vhd clean
 
 help:
 	@echo "Targets, in the order you run them:"
@@ -20,6 +20,7 @@ help:
 	@echo "  upgrade        build the next version, upgrade the VM, verify, roll back"
 	@echo "  sig-test       check that the VM rejects an unsigned image and accepts the signed one"
 	@echo "  switch         move the VM to the signed image on ghcr.io and verify the boot"
+	@echo "  vhd            convert out/disk.raw to a fixed VHD for Azure"
 	@echo "  stop           stop the background VM"
 	@echo "  registry-down  remove the local registry"
 	@echo "  lint           run shellcheck on scripts/"
@@ -83,6 +84,9 @@ sig-test:
 
 switch:
 	scripts/60-switch-test.sh
+
+vhd:
+	scripts/70-vhd.sh
 
 clean:
 	rm -rf out

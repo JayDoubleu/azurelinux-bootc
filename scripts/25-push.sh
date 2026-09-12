@@ -17,3 +17,14 @@ host skopeo --registries.d "$REGISTRIES_D" copy \
   "containers-storage:localhost/${IMAGE_NAME}:${IMAGE_TAG}" \
   "docker://${HOST_IMAGE_REF}" 2>&1 | tee "$LOG_DIR/push.log"
 log "pushed and signed ${HOST_IMAGE_REF}"
+
+# EXTRA_TAGS holds more tags for the same image, for example "v5 20260912". CI sets it.
+for tag in ${EXTRA_TAGS:-}; do
+  host skopeo --registries.d "$REGISTRIES_D" copy \
+    --dest-tls-verify="$PUSH_TLS_VERIFY" \
+    --sign-by-sigstore-private-key "$SIGN_KEY" \
+    --sign-passphrase-file "$SIGN_PASSPHRASE" \
+    "containers-storage:localhost/${IMAGE_NAME}:${IMAGE_TAG}" \
+    "docker://${REGISTRY_FROM_HOST}/${IMAGE_NAME}:${tag}" >/dev/null
+  log "pushed and signed ${REGISTRY_FROM_HOST}/${IMAGE_NAME}:${tag}"
+done

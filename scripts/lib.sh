@@ -47,6 +47,7 @@ SIGN_PUBKEY="$REPO_ROOT/config/etc/pki/containers/${IMAGE_NAME}.pub"
 REGISTRIES_D="$REPO_ROOT/config/etc/containers/registries.d"
 
 DISK_IMAGE="$OUT_DIR/disk.raw"
+VHD_IMAGE="$OUT_DIR/disk.vhd"
 DISK_SIZE="${DISK_SIZE:-20G}"
 VM_MEMORY="${VM_MEMORY:-2048}"
 VM_CPUS="${VM_CPUS:-2}"
