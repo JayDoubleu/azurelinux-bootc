@@ -88,6 +88,11 @@ RUN set -eux; \
 #    The base image locks root with "!unprovisioned" in /etc/shadow. sshd refuses a
 #    locked account even for key login, so the field becomes "*": no password, not locked.
 #    The build args sit here, after the package layers, so a new VERSION reuses the cache.
+# EXTRA_PACKAGES adds packages for a test build, for example EXTRA_PACKAGES=tmux. It sits after
+# the big package layer, so a test build reuses that layer.
+ARG EXTRA_PACKAGES=""
+RUN if [ -n "${EXTRA_PACKAGES}" ]; then dnf -y install ${EXTRA_PACKAGES} && dnf clean all; fi
+
 # VERSION is a build number. The upgrade test reads it from the running VM.
 # The package list next to it records what the unpinned preview repo delivered.
 ARG VERSION=1

@@ -3,6 +3,7 @@
 # 15-chunk-image.sh turns it into the final IMAGE_NAME:IMAGE_TAG.
 # Usage: 10-build-image.sh [VERSION]
 # VERSION is a build number. The image stores it in /usr/lib/azurelinux-bootc/version.
+# EXTRA_PACKAGES, if set, adds packages to the build. The upgrade test uses it to measure a package change.
 # shellcheck source=lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
@@ -16,6 +17,7 @@ old_id="$(host podman image inspect --format '{{.Id}}' "${IMAGE_NAME}:${BUILD_TA
 log "building ${IMAGE_NAME}:${BUILD_TAG} with VERSION=${version}"
 host podman build \
   --build-arg "VERSION=${version}" \
+  --build-arg "EXTRA_PACKAGES=${EXTRA_PACKAGES:-}" \
   -t "${IMAGE_NAME}:${BUILD_TAG}" \
   -f "$REPO_ROOT/Containerfile" \
   "$REPO_ROOT" 2>&1 | tee "$LOG_DIR/build-v${version}.log"

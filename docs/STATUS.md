@@ -28,6 +28,8 @@ M1 to M5 are done. The VM boots the signed CI image from ghcr.io. What is left i
 - 2026-09-08: the build scripts remove the image a tag pointed at before, so the rootless store holds one `build` and one `dev` image.
 - 2026-09-08: package layering (M5). `rpm-ostree install strace` on the booted host pulls the package from the preview repo and stages a layered deployment. After a reboot `strace` works. `rpm-ostree reset` removes the layer and the host is bootc-compatible again. Logs: `out/logs/layering-attempt-*.txt`.
 - 2026-09-08: `bootc upgrade` after a `bootc rollback`. The rolled-back-from image stays as `cachedUpdate`; `bootc upgrade --check` compares the registry with that cache and reports "No changes" when nothing new is to download. `bootc upgrade` then deploys the cached image, and a newer registry image is fetched as usual.
+- 2026-09-12: `make vhd` writes a fixed VHD from `out/disk.raw` with `qemu-img convert -O vpc -o subformat=fixed,force_size`. The VM must be stopped first. Not tested on Azure.
+- 2026-09-12: CI pushes `latest`, `v<run>` and `<YYYYMMDD>` tags, each signed.
 - 2026-09-12: `make switch` passes. `bootc switch --enforce-container-sigpolicy ghcr.io/jaydoubleu/azurelinux-bootc:latest` on the VM needed 5 of 65 layers (81.9 MB): the chunk step gave the CI build and the local build 60 identical layers. After the reboot the VM runs version 5 from ghcr.io, enforcing, signature checked by the policy, no failed unit, and `bootc upgrade --check` works against ghcr.io. The private package is read with a `read:packages` token in `/etc/ostree/auth.json`.
 - 2026-09-08: images are signed. `make build` creates a sigstore key pair once, `make push` signs with skopeo, the image carries the public key and a policy that rejects everything except a signed `10.0.2.2:5000/azurelinux-bootc`. `make disk` installs with `--enforce-container-sigpolicy`. `make sig-test` passes: the VM refuses an unsigned image with "A signature was required, but no signature exists" and accepts the signed one. `make upgrade` passes with signed images.
 - 2026-09-07: the Containerfile pins the base image by digest (tag `4.0.2026052700`). `make base-digest` compares the pin with the `4.0` tag. The build reuses the cached layers with the pin. The image records its package list in `/usr/lib/azurelinux-bootc/packages` (302 packages).
@@ -38,7 +40,7 @@ M1 to M5 are done. The VM boots the signed CI image from ghcr.io. What is left i
 - The packages are not pinned. The preview repo has no snapshots. The package list in the image is the record of what each build got.
 - A version bump downloads 63 MB. The initramfs, the bootupd EFI files and the version file share the one layer for files that no package owns. Splitting that layer is future work.
 - `bootc upgrade` refuses a deployment with layered packages: "Deployment contains local rpm-ostree modifications; cannot upgrade via bootc". `rpm-ostree upgrade` on this host prints "Pulling manifest" and exits 0 without a new deployment, with or without a layer, so a layered host cannot take an image update in place. Workaround: `rpm-ostree reset`, reboot, `bootc upgrade`, reboot, `rpm-ostree install` again. Open question for rpm-ostree 2026.1 on bootc 1.13.
-- A package update was not measured yet. Expected: the layers of the changed packages plus the 63 MB above.
+- Measured on 2026-09-12: an upgrade that adds `tmux` downloads 6 layers of 83.5 MB, the 63 MB above plus the layers of the new packages. `EXTRA_PACKAGES=tmux make upgrade` runs that test.
 
 ## Next action
 
