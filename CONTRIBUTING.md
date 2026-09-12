@@ -8,7 +8,7 @@
 
 ## Writing rules
 
-All text in this repository follows the rules in `CLAUDE.md`. Short sentences. Active voice. No em-dashes.
+All text in this repository follows the rules in `AGENTS.md`. Short sentences. Active voice. No em-dashes.
 
 ## Decisions
 

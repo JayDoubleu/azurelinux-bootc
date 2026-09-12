@@ -8,7 +8,7 @@
 # shellcheck source=lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-# Re-run on the host as root when needed. The user has authorised sudo for this loop.
+# Re-run on the host as root when needed. Loop devices and mounts need root.
 if [ -f /run/.toolboxenv ]; then
   log "re-running on the host with sudo"
   exec flatpak-spawn --host sudo env "ARCH=$ARCH" "$REPO_ROOT/scripts/30-install-disk.sh"
