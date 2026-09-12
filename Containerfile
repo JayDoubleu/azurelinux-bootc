@@ -112,7 +112,7 @@ RUN set -eux; \
     systemctl enable systemd-networkd systemd-resolved sshd; \
     systemctl mask systemd-firstboot.service; \
     sed -i 's/^SELINUX=.*/SELINUX=enforcing/' /etc/selinux/config; \
-    if [ -n "${ROOT_PASSWORD}" ]; then echo "root:${ROOT_PASSWORD}" | chpasswd; else usermod -p '*' root; fi; \
+    if [ -n "${ROOT_PASSWORD}" ]; then set +x; echo "root:${ROOT_PASSWORD}" | chpasswd; set -x; else usermod -p '*' root; fi; \
     rm -f /etc/machine-id; \
     mkdir -p /usr/lib/azurelinux-bootc; \
     echo "${VERSION}" > /usr/lib/azurelinux-bootc/version; \
@@ -123,8 +123,9 @@ RUN set -eux; \
 #    system has a read-only /usr. Switch the database to rollback-journal mode, which needs
 #    no side files, so `rpm -qa` works on the host.
 #    The user.component xattrs steer the chunk step: rpm-ostree puts every marked path into its
-#    own layer. The commit moves /etc to /usr/etc, so each file is marked, not only the directory. Without them the version file, /etc and the bootupd files
-#    share the 60 MB layer that holds the initramfs, and every version bump downloads it.
+#    own layer. The commit moves /etc to /usr/etc, so each file is marked, not only the directory.
+#    Without them the version file, /etc and the bootupd files share the 60 MB layer that holds
+#    the initramfs, and every version bump downloads it.
 #    `ostree container commit` is not used: it needs an
 #    ostree repo marker that only rpm-ostree-composed images carry. ostree copies the
 #    image's /var into the machine's /var on the first deployment.
