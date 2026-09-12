@@ -36,19 +36,23 @@ jobs:
           - arch: x86_64
             runner: ubuntu-24.04
             suffix: ""
+            ovmf_code: /usr/share/OVMF/OVMF_CODE_4M.fd
+            ovmf_vars: /usr/share/OVMF/OVMF_VARS_4M.fd
             # The x86_64 runners have /dev/kvm, so the QEMU loop runs here.
             test: true
           - arch: aarch64
             runner: ubuntu-24.04-arm
             suffix: -arm64
+            ovmf_code: /usr/share/AAVMF/AAVMF_CODE.fd
+            ovmf_vars: /usr/share/AAVMF/AAVMF_VARS.fd
             # Native arm64 runner, free for public repositories. No KVM there, so no boot test yet;
             # an install probe below shows whether bootc install works natively.
             test: false
     env:
       ARCH: ${{ matrix.arch }}
-      # Ubuntu paths from the ovmf package. scripts/lib.sh defaults to the Fedora paths.
-      OVMF_CODE: /usr/share/OVMF/OVMF_CODE_4M.fd
-      OVMF_VARS_SRC: /usr/share/OVMF/OVMF_VARS_4M.fd
+      # Ubuntu firmware paths from the ovmf and qemu-efi-aarch64 packages. scripts/lib.sh defaults to the Fedora paths.
+      OVMF_CODE: ${{ matrix.ovmf_code }}
+      OVMF_VARS_SRC: ${{ matrix.ovmf_vars }}
       # IMAGE_TAG and REGISTRY_FROM_HOST stay unset here. The test loop uses the defaults,
       # dev and localhost:5000. The ghcr.io push step sets its own.
     steps:
@@ -67,7 +71,8 @@ jobs:
             sudo apt-get install -y podman skopeo slirp4netns qemu-system-x86 qemu-utils ovmf
             qemu-system-x86_64 --version | head -n 1
           else
-            sudo apt-get install -y podman skopeo slirp4netns qemu-utils
+            sudo apt-get install -y podman skopeo slirp4netns qemu-system-arm qemu-utils qemu-efi-aarch64
+            qemu-system-aarch64 --version | head -n 1
             ls -l /dev/kvm 2>/dev/null || echo 'no /dev/kvm on this runner'
           fi
           podman --version
@@ -137,15 +142,35 @@ jobs:
           podman info --format '{{.Host.OCIRuntime.Name}} {{.Host.OCIRuntime.Version}}'
           podman run --rm localhost/azurelinux-bootc:dev true && echo 'container start ok'
 
-      - name: Install probe on arm64
-        # Answers whether bootc install to-disk works natively on this runner. Informational.
+      - name: Install and boot probe on arm64
+        # bootc install works natively on this runner (verified 2026-09-12). The boot runs under
+        # same-architecture TCG, because the runner has no KVM, so it is slow. Informational.
         if: matrix.arch == 'aarch64'
         continue-on-error: true
         run: |
           make registry
           make push
           make disk
-          ls -la --block-size=M out/
+          make check
+          make run-bg
+          scripts/46-wait-ssh.sh 1500
+          scripts/45-ssh.sh uname -m
+          scripts/45-ssh.sh bootc status
+          scripts/45-ssh.sh getenforce
+
+      - name: Stop the arm64 VM
+        if: always() && matrix.arch == 'aarch64'
+        run: make stop
+
+      - name: Upload arm64 logs
+        if: always() && matrix.arch == 'aarch64'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: qemu-logs-aarch64
+          path: |
+            out/logs/
+            out/serial.log
+          if-no-files-found: ignore
 
       - name: Local registry and signed push
         if: matrix.test
