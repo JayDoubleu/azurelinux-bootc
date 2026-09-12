@@ -7,7 +7,7 @@
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 log "waiting for the VM on port $SSH_PORT"
-wait_for_ssh 300 || die "the VM is not reachable; run: make run-bg"
+wait_for_ssh "$SSH_WAIT" || die "the VM is not reachable; run: make run-bg"
 
 # A new label gives the image a new manifest digest, so no stored signature matches it.
 unsigned_ref="localhost/${IMAGE_NAME}:unsigned"

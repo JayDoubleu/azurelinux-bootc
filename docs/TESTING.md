@@ -34,7 +34,7 @@ QEMU user networking maps the host to `10.0.2.2` inside the VM. The image marks 
 
 ## The same loop in CI
 
-`.github/workflows/build.yml` runs the loop on a GitHub-hosted `ubuntu-24.04` runner for x86_64: build, local registry, signed push, `make disk`, boot under KVM, `bootc status`, `make upgrade`, `make sig-test`, then the signed push to ghcr.io. The runner needs a udev rule for `/dev/kvm`, the `ovmf` package, and `kernel.apparmor_restrict_unprivileged_userns=0` for skopeo. The `OVMF_CODE` and `OVMF_VARS_SRC` variables point at the Ubuntu firmware paths. The arm64 job runs on the native `ubuntu-24.04-arm` runner and builds and pushes; it also runs `make disk` as an informational probe. The arm64 runners have no KVM, so there is no arm64 boot test yet. The logs land in the `qemu-logs-x86_64` artifact.
+`.github/workflows/build.yml` runs the loop on a GitHub-hosted `ubuntu-24.04` runner for x86_64: build, local registry, signed push, `make disk`, boot under KVM, `bootc status`, `make upgrade`, `make sig-test`, then the signed push to ghcr.io. The runner needs a udev rule for `/dev/kvm`, the `ovmf` package, and `kernel.apparmor_restrict_unprivileged_userns=0` for skopeo. The `OVMF_CODE` and `OVMF_VARS_SRC` variables point at the Ubuntu firmware paths. The arm64 job runs the same loop on the native `ubuntu-24.04-arm` runner. That runner has no KVM, so the guest runs under same-architecture TCG and boots in about 4 minutes; `SSH_WAIT=1500` gives the reboots room. The logs land in the `qemu-logs-x86_64` artifact.
 
 ## Layers
 

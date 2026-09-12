@@ -3,7 +3,7 @@
 # shellcheck source=lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-limit="${1:-300}"
+limit="${1:-$SSH_WAIT}"
 log "waiting up to ${limit}s for ssh on port ${SSH_PORT}"
 if wait_for_ssh "$limit"; then
   log "ssh is up"

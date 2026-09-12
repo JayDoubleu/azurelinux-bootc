@@ -34,5 +34,5 @@ If 4.0 preview churn blocks M1 or M2, switch to 3.0 GA. Build the image with `rp
 
 - Desktop environment. Checked on 2026-09-12: the 4.0 preview repo has no compositor, display manager, session, portal or audio server. Only `xorg-x11-server-Xwayland` and `mesa-dri-drivers` exist. GNOME, KDE, Sway and their dependencies need packaging first.
 - Flatpak. Not in the 4.0 preview repo either. Same packaging work.
-- aarch64. CI builds it on the native `ubuntu-24.04-arm` runner since 2026-09-12, and `bootc install` works there. User-mode emulation on x86_64 cannot run `bootc install`. Next: a boot under TCG on that runner.
+- aarch64. Done 2026-09-12: CI builds, installs and boots it on the native `ubuntu-24.04-arm` runner under TCG. User-mode emulation on x86_64 cannot run `bootc install`.
 - Azure VM image. `make vhd` writes a fixed VHD from `out/disk.raw`. Not tested on Azure.

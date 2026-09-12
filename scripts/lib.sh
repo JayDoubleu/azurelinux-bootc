@@ -72,6 +72,8 @@ VM_MEMORY="${VM_MEMORY:-2048}"
 VM_CPUS="${VM_CPUS:-2}"
 SSH_PORT="${SSH_PORT:-2222}"
 SSH_KEY="$OUT_DIR/ssh/id_ed25519"
+# Seconds to wait for ssh after a boot. A TCG guest needs more than a KVM guest.
+SSH_WAIT="${SSH_WAIT:-300}"
 
 OVMF_VARS="$OUT_DIR/OVMF_VARS${TAG_SUFFIX}.fd"
 QEMU_PIDFILE="$OUT_DIR/qemu.pid"

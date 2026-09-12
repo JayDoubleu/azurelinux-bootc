@@ -12,7 +12,7 @@ image="${1:-$GHCR_IMAGE_REF}"
 registry="${image%%/*}"
 
 log "waiting for the VM on port $SSH_PORT"
-wait_for_ssh 300 || die "the VM is not reachable; run: make run-bg"
+wait_for_ssh "$SSH_WAIT" || die "the VM is not reachable; run: make run-bg"
 
 if command -v gh >/dev/null 2>&1 && token="$(gh auth token 2>/dev/null)" && [ -n "$token" ]; then
   user="$(gh api user --jq .login)"
@@ -31,7 +31,7 @@ ssh_vm bootc switch --enforce-container-sigpolicy "$image" 2>&1 \
 log "rebooting the VM"
 ssh_vm systemctl reboot >/dev/null 2>&1 || true
 sleep 15
-wait_for_ssh 300 || die "the VM did not come back after reboot; see $SERIAL_LOG"
+wait_for_ssh "$SSH_WAIT" || die "the VM did not come back after reboot; see $SERIAL_LOG"
 
 booted="$(ssh_vm bootc status --format=json \
   | python3 -c 'import json,sys; print(json.load(sys.stdin)["status"]["booted"]["image"]["image"]["image"])')"

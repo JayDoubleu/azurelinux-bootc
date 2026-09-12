@@ -12,11 +12,11 @@ reboot_and_wait() {
   log "rebooting the VM"
   ssh_vm systemctl reboot >/dev/null 2>&1 || true
   sleep 15
-  wait_for_ssh 300 || die "the VM did not come back after reboot; see $SERIAL_LOG"
+  wait_for_ssh "$SSH_WAIT" || die "the VM did not come back after reboot; see $SERIAL_LOG"
 }
 
 log "waiting for the VM on port $SSH_PORT"
-wait_for_ssh 300 || die "the VM is not reachable; run: make run-bg"
+wait_for_ssh "$SSH_WAIT" || die "the VM is not reachable; run: make run-bg"
 
 before="$(get_version)"
 next=$(( before + 1 ))
