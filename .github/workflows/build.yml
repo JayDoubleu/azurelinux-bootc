@@ -39,7 +39,7 @@ jobs:
       # IMAGE_TAG and REGISTRY_FROM_HOST stay unset here. The test loop uses the defaults,
       # dev and localhost:5000. The ghcr.io push step sets its own.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Registry path and tags for ghcr.io
         # ghcr.io wants the owner in lowercase. Tags: latest, vRUN and YYYYMMDD, with -arm64 for aarch64.
@@ -50,7 +50,7 @@ jobs:
       - name: Emulation for aarch64
         # Registers binfmt handlers, so podman runs arm64 containers on the x86_64 runner.
         if: matrix.arch == 'aarch64'
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4.3.0
         with:
           platforms: arm64
 
@@ -160,7 +160,7 @@ jobs:
 
       - name: Upload logs
         if: always() && matrix.test
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: qemu-logs-${{ matrix.arch }}
           path: |
