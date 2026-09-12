@@ -50,7 +50,7 @@ podman run --rm --privileged --pid=host --platform "$PODMAN_PLATFORM" \
     --target-imgref "$VM_IMAGE_REF" \
     --enforce-container-sigpolicy \
     --root-ssh-authorized-keys /output/ssh/id_ed25519.pub \
-    /output/disk.raw 2>&1 | tee "$LOG_DIR/install.log"
+    "/output/$(basename "$DISK_IMAGE")" 2>&1 | tee "$LOG_DIR/install.log"
 
 # The root image store only serves this install. Drop the image again so the store does not
 # grow by one image per install.

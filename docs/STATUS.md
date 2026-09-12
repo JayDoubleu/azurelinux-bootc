@@ -35,6 +35,8 @@ M1 to M5 are done. The VM boots the signed CI image from ghcr.io. What is left i
 - 2026-09-08: images are signed. `make build` creates a sigstore key pair once, `make push` signs with skopeo, the image carries the public key and a policy that rejects everything except a signed `10.0.2.2:5000/azurelinux-bootc`. `make disk` installs with `--enforce-container-sigpolicy`. `make sig-test` passes: the VM refuses an unsigned image with "A signature was required, but no signature exists" and accepts the signed one. `make upgrade` passes with signed images.
 - 2026-09-07: the Containerfile pins the base image by digest (tag `4.0.2026052700`). `make base-digest` compares the pin with the `4.0` tag. The build reuses the cached layers with the pin. The image records its package list in `/usr/lib/azurelinux-bootc/packages` (302 packages).
 
+- 2026-09-12: the aarch64 image builds in CI under emulation in 34 minutes and is on ghcr.io as `latest-arm64`, `v<run>-arm64` and `<date>-arm64`: architecture `arm64`, 65 layers, version 13. The Containerfile picks `grub2-efi-aa64 shim-aa64` from `TARGETARCH`.
+
 ## What is unverified or broken
 
 - Lint warning `var-tmpfiles`: `/var` content has no tmpfiles.d entries. Deferred. ostree copies the image's `/var` into the machine's `/var` on the first deployment.
@@ -43,8 +45,6 @@ M1 to M5 are done. The VM boots the signed CI image from ghcr.io. What is left i
 - `rpm-ostree upgrade` pulls the new image and exits 0 without a deployment. Fix submitted: https://github.com/microsoft/azurelinux/pull/18804 (microsoft/azurelinux, from the fork `JayDoubleu/azurelinux-1`). A local rebuild with the fix passed the VM test on 2026-09-12: `rpm-ostree upgrade` stages a newer image, also with `strace` layered, and prints "No upgrade available." when there is none. Cause: rpm-ostree issue #5567, an early return in `deploy_transaction_execute` that ignores the changed base image for container origins. Fixed upstream in 2026.2 (PR #5569). Azure Linux 4.0 ships 2026.1 in the preview repo and on the `4.0` spec branch (checked 2026-09-12). Workarounds verified on 2026-09-12: `rpm-ostree deploy sha256:<digest>` stages the new image; with a layered package, `rpm-ostree rebase ostree-image-signed:docker://10.0.2.2:5000/azurelinux-bootc@sha256:<digest>` stages the new image plus the layer, and a second `rpm-ostree rebase` to the tag reference moves the origin back to the tag. `rpm-ostree rebase` to the unchanged tag reference fails with "Old and new refs are equal".
 - The aarch64 disk install does not work under user-mode emulation on an x86_64 host. `bootc install to-disk` re-executes itself into the host mount namespace, and `setns` fails for an emulated process: "Re-exec in host mountns: setns: Invalid argument". The install and the boot test need a native arm64 machine, for example the `ubuntu-24.04-arm` runner in CI.
 - Measured on 2026-09-12 before the layer split: an upgrade that adds `tmux` downloaded 6 layers of 83.5 MB. `EXTRA_PACKAGES=tmux make upgrade` runs that test. Not measured again after the split; expected: the new package layers plus about 1.5 MB.
-
-- 2026-09-12: the aarch64 image builds in CI under emulation in 34 minutes and is on ghcr.io as `latest-arm64`, `v<run>-arm64` and `<date>-arm64`: architecture `arm64`, 65 layers, version 13. The Containerfile picks `grub2-efi-aa64 shim-aa64` from `TARGETARCH`.
 
 ## Next action
 

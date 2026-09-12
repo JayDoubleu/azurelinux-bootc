@@ -52,7 +52,7 @@ The first `make build` runs `scripts/22-keys.sh`. It creates a sigstore key pair
 
 CI pushes `ghcr.io/jaydoubleu/azurelinux-bootc:latest`, signed with the key from the repository secrets. The image policy trusts that name with the same key. `make switch` runs `bootc switch --enforce-container-sigpolicy` on the VM, reboots it, and checks the booted image, the version and the SELinux mode.
 
-The package is private while the repository is private. A private package needs a token with the `read:packages` scope. The script takes the token from `gh auth token`, and writes it to `/etc/ostree/auth.json` in the VM with mode 600. The token is machine-local state under `/etc`; it is not in the image and not in the logs. To add the scope: `gh auth refresh -h github.com -s read:packages`.
+The package is private at the moment. A private package needs a token with the `read:packages` scope. The script takes the token from `gh auth token`, and writes it to `/etc/ostree/auth.json` in the VM with mode 600. The token is machine-local state under `/etc`; it is not in the image and not in the logs. To add the scope: `gh auth refresh -h github.com -s read:packages`.
 
 ## Versions
 

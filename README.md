@@ -19,34 +19,37 @@ See `docs/ROADMAP.md` for milestones and `docs/decisions/` for why we chose this
 
 ## CI
 
-`.github/workflows/build.yml` builds, chunks, signs and pushes the image to `ghcr.io/jaydoubleu/azurelinux-bootc:latest` on each push to `main`. The image policy trusts that name with the same key. The package is private at the moment; `make switch` takes a token with the `read:packages` scope from `gh auth token`. A fork must change the image name in `scripts/lib.sh` (`GHCR_IMAGE_REF`) and the trust scope in `config/etc/containers/policy.json`. Set the secrets `SIGSTORE_PRIVATE_KEY`, `SIGSTORE_PASSPHRASE` and `SIGSTORE_PUBLIC_KEY` from `out/keys/` and `config/etc/pki/containers/` to sign with a fixed key. Without them each run signs with a throwaway key.
+`.github/workflows/build.yml` builds, chunks, signs and pushes the image to `ghcr.io/jaydoubleu/azurelinux-bootc:latest` on each push to `main`. The image policy trusts that name with the same key. The package is private at the moment; `make switch` takes a token with the `read:packages` scope from `gh auth token`. A fork must change the image name in `scripts/lib.sh` (`GHCR_IMAGE_REF`), the trust scope in `config/etc/containers/policy.json`, and set the three secrets: the policy in the image trusts only the key that built it. Set the secrets `SIGSTORE_PRIVATE_KEY`, `SIGSTORE_PASSPHRASE` and `SIGSTORE_PUBLIC_KEY` from `out/keys/` and `config/etc/pki/containers/` to sign with a fixed key. Without them each run signs with a throwaway key.
 
 ## Requirements
 
 Host tools:
 
 - podman 5 or later
-- qemu-system-x86_64 with KVM
-- OVMF firmware (`edk2-ovmf` on Fedora)
+- skopeo
+- qemu-system-x86_64 with KVM, and qemu-img
+- OVMF firmware (`edk2-ovmf` on Fedora, `ovmf` on Ubuntu)
 - ssh-keygen
 
-Run `scripts/00-check-tools.sh` to verify.
+Run `make check` to verify. On Ubuntu, set the firmware paths once: `export OVMF_CODE=/usr/share/OVMF/OVMF_CODE_4M.fd OVMF_VARS_SRC=/usr/share/OVMF/OVMF_VARS_4M.fd`. Ubuntu 24.04 also needs `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0` for skopeo.
 
 ## Quick start
 
 ```
 make check       # verify host tools
-make build       # build the bootc container image
+make build       # build the bootc container image (creates the signing key on the first run)
 make registry    # start a local OCI registry on port 5000
-make push        # push the image to the local registry
+make push        # sign the image and push it to the local registry
 make disk        # write the image to out/disk.raw (re-runs itself with sudo on the host)
-make run         # boot out/disk.raw in QEMU on the command line
+make run-bg      # boot out/disk.raw in QEMU in the background; make ssh opens a root shell
 make upgrade     # build v2, push it, upgrade the VM, verify, roll back
 make sig-test    # check that the VM refuses an unsigned image
-make switch      # move the VM to the signed image on ghcr.io
+make stop        # stop the VM
 ```
 
 Each target is a script in `scripts/`. Read the script before you run it.
+
+`make switch` moves the VM to the signed image on ghcr.io. The policy in the image trusts only the key that built it, so this step works only with your own fork, CI and secrets. See `docs/TESTING.md`.
 
 `ARCH=aarch64 make build` builds the arm64 image. See `docs/TESTING.md`.
 
