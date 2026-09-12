@@ -29,7 +29,7 @@ M1 to M5 are done. The VM boots the signed CI image from ghcr.io. What is left i
 - 2026-09-08: package layering (M5). `rpm-ostree install strace` on the booted host pulls the package from the preview repo and stages a layered deployment. After a reboot `strace` works. `rpm-ostree reset` removes the layer and the host is bootc-compatible again. Logs: `out/logs/layering-attempt-*.txt`.
 - 2026-09-08: `bootc upgrade` after a `bootc rollback`. The rolled-back-from image stays as `cachedUpdate`; `bootc upgrade --check` compares the registry with that cache and reports "No changes" when nothing new is to download. `bootc upgrade` then deploys the cached image, and a newer registry image is fetched as usual.
 - 2026-09-12: `make vhd` writes a fixed VHD from `out/disk.raw` with `qemu-img convert -O vpc -o subformat=fixed,force_size`. The VM must be stopped first. Not tested on Azure.
-- 2026-09-12: CI pushes `latest`, `v<run>` and `<YYYYMMDD>` tags, each signed.
+- 2026-09-12: CI pushes `latest`, `v<run>` and `<YYYYMMDD>` tags, each signed. Verified on ghcr.io: `latest`, `v7`, `20260912`.
 - 2026-09-12: `make switch` passes. `bootc switch --enforce-container-sigpolicy ghcr.io/jaydoubleu/azurelinux-bootc:latest` on the VM needed 5 of 65 layers (81.9 MB): the chunk step gave the CI build and the local build 60 identical layers. After the reboot the VM runs version 5 from ghcr.io, enforcing, signature checked by the policy, no failed unit, and `bootc upgrade --check` works against ghcr.io. The private package is read with a `read:packages` token in `/etc/ostree/auth.json`.
 - 2026-09-08: images are signed. `make build` creates a sigstore key pair once, `make push` signs with skopeo, the image carries the public key and a policy that rejects everything except a signed `10.0.2.2:5000/azurelinux-bootc`. `make disk` installs with `--enforce-container-sigpolicy`. `make sig-test` passes: the VM refuses an unsigned image with "A signature was required, but no signature exists" and accepts the signed one. `make upgrade` passes with signed images.
 - 2026-09-07: the Containerfile pins the base image by digest (tag `4.0.2026052700`). `make base-digest` compares the pin with the `4.0` tag. The build reuses the cached layers with the pin. The image records its package list in `/usr/lib/azurelinux-bootc/packages` (302 packages).
@@ -39,15 +39,15 @@ M1 to M5 are done. The VM boots the signed CI image from ghcr.io. What is left i
 - Lint warning `var-tmpfiles`: `/var` content has no tmpfiles.d entries. Deferred. ostree copies the image's `/var` into the machine's `/var` on the first deployment.
 - The packages are not pinned. The preview repo has no snapshots. The package list in the image is the record of what each build got.
 - A version bump downloads 63 MB. The initramfs, the bootupd EFI files and the version file share the one layer for files that no package owns. Splitting that layer is future work.
-- `bootc upgrade` refuses a deployment with layered packages: "Deployment contains local rpm-ostree modifications; cannot upgrade via bootc". `rpm-ostree upgrade` on this host prints "Pulling manifest" and exits 0 without a new deployment, with or without a layer, so a layered host cannot take an image update in place. Workaround: `rpm-ostree reset`, reboot, `bootc upgrade`, reboot, `rpm-ostree install` again. Open question for rpm-ostree 2026.1 on bootc 1.13.
+- `bootc upgrade` refuses a deployment with layered packages: "Deployment contains local rpm-ostree modifications; cannot upgrade via bootc".
+- `rpm-ostree upgrade` pulls the new image and exits 0 without a deployment. Cause: rpm-ostree issue #5567, an early return in `deploy_transaction_execute` that ignores the changed base image for container origins. Fixed upstream in 2026.2 (PR #5569). Azure Linux 4.0 ships 2026.1 in the preview repo and on the `4.0` spec branch (checked 2026-09-12). Workarounds verified on 2026-09-12: `rpm-ostree deploy sha256:<digest>` stages the new image; with a layered package, `rpm-ostree rebase ostree-image-signed:docker://10.0.2.2:5000/azurelinux-bootc@sha256:<digest>` stages the new image plus the layer, and a second `rpm-ostree rebase` to the tag reference moves the origin back to the tag. `rpm-ostree rebase` to the unchanged tag reference fails with "Old and new refs are equal".
 - Measured on 2026-09-12: an upgrade that adds `tmux` downloads 6 layers of 83.5 MB, the 63 MB above plus the layers of the new packages. `EXTRA_PACKAGES=tmux make upgrade` runs that test.
 
 ## Next action
 
 1. Split the 63 MB layer of unpackaged files, so a version bump downloads less than the initramfs.
-2. Find out why `rpm-ostree upgrade` deploys nothing on this host.
-3. One tag per Azure Linux snapshot on ghcr.io, once the preview repo settles.
-4. Future work from `docs/ROADMAP.md`: desktop environment, Flatpak, aarch64, Azure VM image.
+2. rpm-ostree 2026.2 or later in the image, once Azure Linux 4.0 packages it, so `rpm-ostree upgrade` works on layered hosts without the digest rebase.
+3. Future work from `docs/ROADMAP.md`: desktop environment, Flatpak, aarch64, Azure VM image.
 
 ## Environment notes
 
@@ -71,7 +71,7 @@ M1 to M5 are done. The VM boots the signed CI image from ghcr.io. What is left i
 - The image policy rejects every source except the signed registry image and `containers-storage` for the install. The chunk step runs inside the image, so `scripts/15-chunk-image.sh` bind-mounts a permissive policy over `/etc/containers/policy.json` in that container.
 - The signature names the image `localhost:5000/azurelinux-bootc`, the name the host pushed to. The policy maps the VM's name for the registry to it with `exactRepository`.
 - Each developer has their own key pair in `out/keys/`. The public key in `config/etc/pki/containers/` is ignored by git.
-- The VM is a throwaway. At the end of session 3 it runs version 5 from ghcr.io. `make stop` stops it. A host reboot stops it too; `make run-bg` starts it again from `out/disk.raw`.
+- The VM is a throwaway. At the end of session 3 it runs version 5 from the local registry, no layered packages. `make stop` stops it. A host reboot stops it too; `make run-bg` starts it again from `out/disk.raw`.
 - CI runs on Ubuntu 24.04. Three runner fixes: `shellcheck -x -P SCRIPTDIR` so sourced files resolve from the repository root; `kernel.apparmor_restrict_unprivileged_userns=0` so skopeo can write the rootless image store; the ghcr.io path in lowercase.
 - `grep --exclude-dir` matches directory names, not paths. The local `grep` is an alias for `ugrep`, which behaves differently, so test grep flags in CI, not locally.
 - An empty private repository `an unused repository` from 2026-09-07 is unused.

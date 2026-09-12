@@ -50,3 +50,6 @@ Append one entry per session. Newest at the bottom. Keep each entry short: what 
 - Wrote the token to `/etc/ostree/auth.json` in the VM and ran `bootc switch --enforce-container-sigpolicy ghcr.io/jaydoubleu/azurelinux-bootc:latest`. Only 5 of 65 layers (81.9 MB) were new. The VM booted version 5 from ghcr.io, enforcing, with the signature checked.
 - Added `scripts/60-switch-test.sh` and `make switch`. It writes the auth file from `gh auth token`, switches, reboots and verifies. Ran it once: PASS.
 - M1 to M5 are done. Open: the 63 MB unpackaged layer, `rpm-ostree upgrade` on this host, dated tags.
+- Research agent found the `rpm-ostree upgrade` cause: issue #5567, fixed in 2026.2. Confirmed in the VM: `upgrade` stages nothing, `rebase` to the same tag fails with "Old and new refs are equal", `deploy sha256:<digest>` works, and a rebase to `...@sha256:<digest>` with `strace` layered boots version 5 with `strace` and `tmux`. A second rebase to the tag restores the tag origin. `rpm-ostree reset` cleans up.
+- CI tags verified on ghcr.io: `latest`, `v7`, `20260912`. `make vhd` works with the VM stopped. Measured an upgrade that adds `tmux`: 6 layers, 83.5 MB.
+- Recreated the local registry to drop a 3.4 GB volume. `podman volume prune` also removed 33 unused volumes from other projects; reported to the user.
