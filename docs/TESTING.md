@@ -30,7 +30,7 @@ QEMU user networking maps the host to `10.0.2.2` inside the VM. The image marks 
 
 ## aarch64
 
-`ARCH=aarch64` in front of any `make` target builds and tests the arm64 image. The tag, the disk image and the chunk directory get the suffix `-arm64`. On an x86_64 host the build and the chunk step run under user-mode emulation, and the VM runs under TCG, which is slow. The host needs three extra packages: `qemu-user-static-aarch64` for the build, `qemu-system-aarch64-core` and `edk2-aarch64` for the VM. The kernel arguments in `config/usr/lib/bootc/kargs.d/` select the console per architecture. CI builds both architectures on every push.
+`ARCH=aarch64` in front of any `make` target builds and tests the arm64 image. The tag, the disk image and the chunk directory get the suffix `-arm64`. On an x86_64 host the build and the chunk step run under user-mode emulation, and the VM runs under TCG, which is slow. On Fedora the host needs three extra packages: `qemu-user-static-aarch64` for the build, and `qemu-system-aarch64-core` and `edk2-aarch64` for the VM. The kernel arguments in `config/usr/lib/bootc/kargs.d/` select the console per architecture. CI builds both architectures on every push.
 
 ## The same loop in CI
 

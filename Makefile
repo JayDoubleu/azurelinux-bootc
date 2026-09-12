@@ -38,6 +38,9 @@ lint:
 	else \
 	  scripts/lint-in-container.sh; \
 	fi
+	@if grep -rIl $$'\xe2\x80\x94' --exclude-dir=.git --exclude-dir=research --exclude-dir=out .; then \
+	  echo "em-dash found"; exit 1; \
+	fi
 
 build:
 	scripts/10-build-image.sh $(VERSION)

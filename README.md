@@ -19,7 +19,11 @@ See `docs/ROADMAP.md` for milestones and `docs/decisions/` for why we chose this
 
 ## CI
 
-`.github/workflows/build.yml` builds, chunks, signs and pushes the image to `ghcr.io/jaydoubleu/azurelinux-bootc:latest` on each push to `main`. The image policy trusts that name with the same key. The package is private at the moment; `make switch` takes a token with the `read:packages` scope from `gh auth token`. A fork must change the image name in `scripts/lib.sh` (`GHCR_IMAGE_REF`), the trust scope in `config/etc/containers/policy.json`, and set the three secrets: the policy in the image trusts only the key that built it. Set the secrets `SIGSTORE_PRIVATE_KEY`, `SIGSTORE_PASSPHRASE` and `SIGSTORE_PUBLIC_KEY` from `out/keys/` and `config/etc/pki/containers/` to sign with a fixed key. Without them each run signs with a throwaway key.
+`.github/workflows/build.yml` builds, chunks, signs and pushes the image on each push to `main`. It derives the registry path from the repository owner, so a fork pushes to its own `ghcr.io/<owner>/azurelinux-bootc`. Set the three secrets `SIGSTORE_PRIVATE_KEY`, `SIGSTORE_PASSPHRASE` and `SIGSTORE_PUBLIC_KEY` from `out/keys/` and `config/etc/pki/containers/`, so every run signs with the same key. Without them each run signs with a throwaway key that no machine can verify.
+
+A fork must also change two values before `make switch` works: `GHCR_IMAGE_REF` in `scripts/lib.sh` and the trust scope in `config/etc/containers/policy.json`. The policy in the image trusts only the key that built the image.
+
+The package `ghcr.io/jaydoubleu/azurelinux-bootc` is private. `make switch` reads it with a token that has the `read:packages` scope, taken from `gh auth token`.
 
 ## Requirements
 
@@ -30,6 +34,8 @@ Host tools:
 - qemu-system-x86_64 with KVM, and qemu-img
 - OVMF firmware (`edk2-ovmf` on Fedora, `ovmf` on Ubuntu)
 - ssh-keygen
+- python3, for the serial console and monitor helpers
+- `gh`, only for `make switch` while the image package is private
 
 Run `make check` to verify. On Ubuntu, set the firmware paths once: `export OVMF_CODE=/usr/share/OVMF/OVMF_CODE_4M.fd OVMF_VARS_SRC=/usr/share/OVMF/OVMF_VARS_4M.fd`. Ubuntu 24.04 also needs `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0` for skopeo.
 

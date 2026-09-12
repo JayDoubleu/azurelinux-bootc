@@ -41,7 +41,7 @@ Append one entry per session. Newest at the bottom. Keep each entry short: what 
 - M5: `rpm-ostree install strace` works on the booted host and survives a reboot. `bootc upgrade` refuses the layered deployment. `rpm-ostree upgrade` prints "Pulling manifest" and exits without a new deployment, both with and without a layer; tried three times with versions 2 and 3 in the registry. `rpm-ostree reset` restores a bootc-compatible host, and `bootc upgrade` then moves it to version 3.
 - Found the `cachedUpdate` behaviour after `bootc rollback`: `bootc upgrade --check` compares the registry with the cached image, not with the booted one.
 - Wrote decision 0003 for the signing design. The VM ends the session on version 3.
-- Created the private repository `JayDoubleu/azurelinux-bootc`, set the three signing secrets from the local key, and pushed. Four CI fixes in a row: `shellcheck -x -P SCRIPTDIR`, the AppArmor user namespace sysctl for skopeo on Ubuntu 24.04, the lowercase ghcr.io path, and `--exclude-dir=research` for the em-dash check. Both workflows pass. The signed image is at `ghcr.io/jaydoubleu/azurelinux-bootc:latest`, private.
+- Created the repository `JayDoubleu/azurelinux-bootc`, private at the time,, set the three signing secrets from the local key, and pushed. Four CI fixes in a row: `shellcheck -x -P SCRIPTDIR`, the AppArmor user namespace sysctl for skopeo on Ubuntu 24.04, the lowercase ghcr.io path, and `--exclude-dir=research` for the em-dash check. Both workflows pass. The signed image is at `ghcr.io/jaydoubleu/azurelinux-bootc:latest`, private.
 - Added the ghcr.io scope to the image policy. The VM runs version 4 with it. The `bootc switch` test waits for a token with `read:packages` or a public package.
 
 ## 2026-09-12, session 3

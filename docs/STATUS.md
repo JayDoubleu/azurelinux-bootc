@@ -2,7 +2,7 @@
 
 Read this first. Update it at the end of every session.
 
-Last updated: 2026-09-12, session 3
+Last updated: 2026-09-12
 
 ## Current milestone
 

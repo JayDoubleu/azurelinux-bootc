@@ -4,7 +4,7 @@
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 status=0
-for tool in podman skopeo "$QEMU_BIN" qemu-img ssh-keygen; do
+for tool in podman skopeo "$QEMU_BIN" qemu-img ssh-keygen python3; do
   if host_has "$tool"; then
     log "ok       $tool"
   else
@@ -13,7 +13,10 @@ for tool in podman skopeo "$QEMU_BIN" qemu-img ssh-keygen; do
   fi
 done
 
-for path in "$OVMF_CODE" "$OVMF_VARS_SRC" /dev/kvm; do
+paths=("$OVMF_CODE" "$OVMF_VARS_SRC")
+# aarch64 runs under TCG on an x86_64 host, so it needs no /dev/kvm.
+[ "$ARCH" = x86_64 ] && paths+=(/dev/kvm)
+for path in "${paths[@]}"; do
   if host_exists "$path"; then
     log "ok       $path"
   else
