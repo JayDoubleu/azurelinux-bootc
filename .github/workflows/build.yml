@@ -18,19 +18,22 @@ concurrency:
 jobs:
   build:
     # Pinned: the firmware paths below are Ubuntu 24.04 paths.
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
         include:
           - arch: x86_64
+            runner: ubuntu-24.04
             suffix: ""
             # The x86_64 runners have /dev/kvm, so the QEMU loop runs here.
             test: true
           - arch: aarch64
+            runner: ubuntu-24.04-arm
             suffix: -arm64
-            # No KVM on the arm64 runners and bootc install cannot run under user-mode emulation.
+            # Native arm64 runner, free for public repositories. No KVM there, so no boot test yet;
+            # an install probe below shows whether bootc install works natively.
             test: false
     env:
       ARCH: ${{ matrix.arch }}
@@ -48,20 +51,18 @@ jobs:
           echo "GHCR=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
           echo "EXTRA_TAGS=v${GITHUB_RUN_NUMBER}${{ matrix.suffix }} $(date -u +%Y%m%d)${{ matrix.suffix }}" >> "$GITHUB_ENV"
 
-      - name: Emulation for aarch64
-        # Registers binfmt handlers, so podman runs arm64 containers on the x86_64 runner.
-        if: matrix.arch == 'aarch64'
-        uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4.3.0
-        with:
-          platforms: arm64
-
       - name: Install podman, skopeo, QEMU and OVMF
         run: |
           sudo apt-get update
-          sudo apt-get install -y podman skopeo slirp4netns qemu-system-x86 qemu-utils ovmf
+          if [ "${{ matrix.arch }}" = x86_64 ]; then
+            sudo apt-get install -y podman skopeo slirp4netns qemu-system-x86 qemu-utils ovmf
+            qemu-system-x86_64 --version | head -n 1
+          else
+            sudo apt-get install -y podman skopeo slirp4netns qemu-utils
+            ls -l /dev/kvm 2>/dev/null || echo 'no /dev/kvm on this runner'
+          fi
           podman --version
           skopeo --version
-          qemu-system-x86_64 --version | head -n 1
 
       - name: Allow unprivileged user namespaces
         # Ubuntu 24.04 lets only binaries with an AppArmor profile create user namespaces.
@@ -126,6 +127,16 @@ jobs:
           podman unshare cat /proc/self/uid_map
           podman info --format '{{.Host.OCIRuntime.Name}} {{.Host.OCIRuntime.Version}}'
           podman run --rm localhost/azurelinux-bootc:dev true && echo 'container start ok'
+
+      - name: Install probe on arm64
+        # Answers whether bootc install to-disk works natively on this runner. Informational.
+        if: matrix.arch == 'aarch64'
+        continue-on-error: true
+        run: |
+          make registry
+          make push
+          make disk
+          ls -la --block-size=M out/
 
       - name: Local registry and signed push
         if: matrix.test
