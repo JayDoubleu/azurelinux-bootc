@@ -13,12 +13,31 @@ LOG_DIR="$OUT_DIR/logs"
 BASE_IMAGE_REPO="mcr.microsoft.com/azurelinux-beta/base/core"
 BASE_IMAGE_TAG="4.0"
 
+# ARCH is x86_64 (default) or aarch64. It selects the podman platform, a tag suffix, the disk
+# image, the firmware and the QEMU binary. aarch64 runs under TCG emulation on an x86_64 host.
+ARCH="${ARCH:-x86_64}"
+case "$ARCH" in
+  x86_64)
+    PODMAN_PLATFORM="linux/amd64"; TARGETARCH="amd64"; TAG_SUFFIX=""
+    QEMU_BIN="qemu-system-x86_64"
+    OVMF_CODE="${OVMF_CODE:-/usr/share/edk2/ovmf/OVMF_CODE.fd}"
+    OVMF_VARS_SRC="${OVMF_VARS_SRC:-/usr/share/edk2/ovmf/OVMF_VARS.fd}"
+    ;;
+  aarch64)
+    PODMAN_PLATFORM="linux/arm64"; TARGETARCH="arm64"; TAG_SUFFIX="-arm64"
+    QEMU_BIN="qemu-system-aarch64"
+    OVMF_CODE="${OVMF_CODE:-/usr/share/edk2/aarch64/QEMU_EFI-pflash.raw}"
+    OVMF_VARS_SRC="${OVMF_VARS_SRC:-/usr/share/edk2/aarch64/vars-template-pflash.raw}"
+    ;;
+  *) echo "unsupported ARCH: $ARCH (x86_64 or aarch64)" >&2; exit 1 ;;
+esac
+
 IMAGE_NAME="${IMAGE_NAME:-azurelinux-bootc}"
-IMAGE_TAG="${IMAGE_TAG:-dev}"
+IMAGE_TAG="${IMAGE_TAG:-dev${TAG_SUFFIX}}"
 # 10-build-image.sh writes IMAGE_NAME:BUILD_TAG. 15-chunk-image.sh turns it into IMAGE_NAME:IMAGE_TAG.
-BUILD_TAG="build"
+BUILD_TAG="build${TAG_SUFFIX}"
 MAX_LAYERS="${MAX_LAYERS:-64}"
-CHUNKED_DIR="$OUT_DIR/chunked"
+CHUNKED_DIR="$OUT_DIR/chunked${TAG_SUFFIX}"
 CHUNK_TMP_DIR="$OUT_DIR/chunk-tmp"
 
 # QEMU user networking maps the host to 10.0.2.2 inside the VM.
@@ -46,17 +65,15 @@ SIGN_PASSPHRASE="$KEY_DIR/passphrase"
 SIGN_PUBKEY="$REPO_ROOT/config/etc/pki/containers/${IMAGE_NAME}.pub"
 REGISTRIES_D="$REPO_ROOT/config/etc/containers/registries.d"
 
-DISK_IMAGE="$OUT_DIR/disk.raw"
-VHD_IMAGE="$OUT_DIR/disk.vhd"
+DISK_IMAGE="$OUT_DIR/disk${TAG_SUFFIX}.raw"
+VHD_IMAGE="$OUT_DIR/disk${TAG_SUFFIX}.vhd"
 DISK_SIZE="${DISK_SIZE:-20G}"
 VM_MEMORY="${VM_MEMORY:-2048}"
 VM_CPUS="${VM_CPUS:-2}"
 SSH_PORT="${SSH_PORT:-2222}"
 SSH_KEY="$OUT_DIR/ssh/id_ed25519"
 
-OVMF_CODE="${OVMF_CODE:-/usr/share/edk2/ovmf/OVMF_CODE.fd}"
-OVMF_VARS_SRC="${OVMF_VARS_SRC:-/usr/share/edk2/ovmf/OVMF_VARS.fd}"
-OVMF_VARS="$OUT_DIR/OVMF_VARS.fd"
+OVMF_VARS="$OUT_DIR/OVMF_VARS${TAG_SUFFIX}.fd"
 QEMU_PIDFILE="$OUT_DIR/qemu.pid"
 QEMU_MONITOR="$OUT_DIR/qemu-monitor.sock"
 SERIAL_LOG="$OUT_DIR/serial.log"

@@ -14,8 +14,10 @@ fi
 
 version="${1:-1}"
 old_id="$(host podman image inspect --format '{{.Id}}' "${IMAGE_NAME}:${BUILD_TAG}" 2>/dev/null || true)"
-log "building ${IMAGE_NAME}:${BUILD_TAG} with VERSION=${version}"
+log "building ${IMAGE_NAME}:${BUILD_TAG} for ${ARCH} with VERSION=${version}"
 host podman build \
+  --platform "$PODMAN_PLATFORM" \
+  --build-arg "TARGETARCH=${TARGETARCH}" \
   --build-arg "VERSION=${version}" \
   --build-arg "EXTRA_PACKAGES=${EXTRA_PACKAGES:-}" \
   -t "${IMAGE_NAME}:${BUILD_TAG}" \

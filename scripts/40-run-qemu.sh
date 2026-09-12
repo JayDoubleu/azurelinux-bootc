@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Boot the disk image in QEMU with UEFI firmware.
+# Boot the disk image in QEMU with UEFI firmware. ARCH=aarch64 boots the arm64 disk under TCG.
 # Usage: 40-run-qemu.sh              # foreground, serial console on this terminal
 #        40-run-qemu.sh --background # detached, serial log in out/serial.log, console on out/serial.sock
 # ssh reaches the VM at localhost:2222 as root with out/ssh/id_ed25519.
@@ -14,9 +14,12 @@ if [ ! -f "$OVMF_VARS" ]; then
 fi
 
 # shellcheck disable=SC2054  # QEMU option values contain commas by design
+case "$ARCH" in
+  x86_64)  machine_args=(-machine q35,accel=kvm -cpu host) ;;
+  aarch64) machine_args=(-machine virt,accel=tcg -cpu cortex-a72) ;;
+esac
 args=(
-  -machine q35,accel=kvm
-  -cpu host
+  "${machine_args[@]}"
   -m "$VM_MEMORY"
   -smp "$VM_CPUS"
   -drive "if=pflash,format=raw,readonly=on,file=$OVMF_CODE"
@@ -43,13 +46,13 @@ case "$mode" in
       -pidfile "$QEMU_PIDFILE"
       -daemonize
     )
-    host qemu-system-x86_64 "${args[@]}"
+    host "$QEMU_BIN" "${args[@]}"
     log "QEMU started in the background; serial log: $SERIAL_LOG; ssh: make ssh"
     ;;
   foreground)
     args+=( -nographic )
     log "starting QEMU in the foreground; exit with Ctrl-a x"
-    host qemu-system-x86_64 "${args[@]}"
+    host "$QEMU_BIN" "${args[@]}"
     ;;
   *)
     die "usage: $0 [--background]"

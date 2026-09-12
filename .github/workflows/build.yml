@@ -13,17 +13,33 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            suffix: ""
+          - arch: aarch64
+            suffix: -arm64
     env:
-      IMAGE_TAG: latest
+      ARCH: ${{ matrix.arch }}
+      IMAGE_TAG: latest${{ matrix.suffix }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Registry path
-        # The push goes to ghcr.io/OWNER/azurelinux-bootc with the tags latest, vRUN and YYYYMMDD.
-        # ghcr.io wants the owner in lowercase.
+        # The push goes to ghcr.io/OWNER/azurelinux-bootc with the tags latest, vRUN and YYYYMMDD,
+        # each with -arm64 for aarch64. ghcr.io wants the owner in lowercase.
         run: |
           echo "REGISTRY_FROM_HOST=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
-          echo "EXTRA_TAGS=v${GITHUB_RUN_NUMBER} $(date -u +%Y%m%d)" >> "$GITHUB_ENV"
+          echo "EXTRA_TAGS=v${GITHUB_RUN_NUMBER}${{ matrix.suffix }} $(date -u +%Y%m%d)${{ matrix.suffix }}" >> "$GITHUB_ENV"
+
+      - name: Emulation for aarch64
+        # Registers binfmt handlers, so podman runs arm64 containers on the x86_64 runner.
+        if: matrix.arch == 'aarch64'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
 
       - name: Install podman and skopeo
         run: |

@@ -38,7 +38,7 @@ printf '{"default": [{"type": "insecureAcceptAnything"}]}\n' > "$OUT_DIR/chunk-p
 
 log "chunking ${build_ref} into ${CHUNKED_DIR} (max ${MAX_LAYERS} layers)"
 # --privileged keeps rpm-ostree from re-running itself in a nested user namespace.
-host podman run --rm --privileged \
+host podman run --rm --privileged --platform "$PODMAN_PLATFORM" \
   --mount "type=image,src=${build_ref},dst=/rootfs" \
   -v "${CHUNKED_DIR}:/output" \
   -v "${CHUNK_TMP_DIR}:/var/tmp" \
@@ -57,5 +57,5 @@ if [ -n "$old_id" ] && [ "$old_id" != "$new_id" ]; then
   host podman rmi "$old_id" >/dev/null 2>&1 || true
 fi
 log "lint of the chunked image"
-host podman run --rm "$final_ref" bootc container lint 2>&1 | tail -n 3
+host podman run --rm --platform "$PODMAN_PLATFORM" "$final_ref" bootc container lint 2>&1 | tail -n 3
 log "chunked image ${final_ref} has ${layers} layers"

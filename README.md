@@ -48,6 +48,8 @@ make switch      # move the VM to the signed image on ghcr.io
 
 Each target is a script in `scripts/`. Read the script before you run it.
 
+`ARCH=aarch64 make build` builds the arm64 image. See `docs/TESTING.md`.
+
 ## Repository layout
 
 | Path | Purpose |

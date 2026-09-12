@@ -11,11 +11,11 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 # Re-run on the host as root when needed. The user has authorised sudo for this loop.
 if [ -f /run/.toolboxenv ]; then
   log "re-running on the host with sudo"
-  exec flatpak-spawn --host sudo "$REPO_ROOT/scripts/30-install-disk.sh"
+  exec flatpak-spawn --host sudo env "ARCH=$ARCH" "$REPO_ROOT/scripts/30-install-disk.sh"
 fi
 if [ "$(id -u)" -ne 0 ]; then
   log "re-running with sudo"
-  exec sudo "$REPO_ROOT/scripts/30-install-disk.sh"
+  exec sudo env "ARCH=$ARCH" "$REPO_ROOT/scripts/30-install-disk.sh"
 fi
 
 mkdir -p "$OUT_DIR/ssh"
@@ -25,13 +25,13 @@ if [ ! -f "$SSH_KEY" ]; then
 fi
 
 log "pulling ${HOST_IMAGE_REF} into the root image store"
-podman pull --tls-verify=false "$HOST_IMAGE_REF" >/dev/null
+podman pull --platform "$PODMAN_PLATFORM" --tls-verify=false "$HOST_IMAGE_REF" >/dev/null
 
 rm -f "$DISK_IMAGE"
 truncate -s "$DISK_SIZE" "$DISK_IMAGE"
 log "installing to $DISK_IMAGE (${DISK_SIZE}); the VM will pull updates from ${VM_IMAGE_REF}"
 
-podman run --rm --privileged --pid=host \
+podman run --rm --privileged --pid=host --platform "$PODMAN_PLATFORM" \
   --security-opt label=type:unconfined_t \
   -v /var/lib/containers:/var/lib/containers \
   -v /dev:/dev \

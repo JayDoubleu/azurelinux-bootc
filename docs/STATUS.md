@@ -43,6 +43,8 @@ M1 to M5 are done. The VM boots the signed CI image from ghcr.io. What is left i
 - `rpm-ostree upgrade` pulls the new image and exits 0 without a deployment. Cause: rpm-ostree issue #5567, an early return in `deploy_transaction_execute` that ignores the changed base image for container origins. Fixed upstream in 2026.2 (PR #5569). Azure Linux 4.0 ships 2026.1 in the preview repo and on the `4.0` spec branch (checked 2026-09-12). Workarounds verified on 2026-09-12: `rpm-ostree deploy sha256:<digest>` stages the new image; with a layered package, `rpm-ostree rebase ostree-image-signed:docker://10.0.2.2:5000/azurelinux-bootc@sha256:<digest>` stages the new image plus the layer, and a second `rpm-ostree rebase` to the tag reference moves the origin back to the tag. `rpm-ostree rebase` to the unchanged tag reference fails with "Old and new refs are equal".
 - Measured on 2026-09-12 before the layer split: an upgrade that adds `tmux` downloaded 6 layers of 83.5 MB. `EXTRA_PACKAGES=tmux make upgrade` runs that test. Not measured again after the split; expected: the new package layers plus about 1.5 MB.
 
+- 2026-09-12: aarch64 support is written, not verified. The 4.0 preview repo has all needed aarch64 packages. The Containerfile picks `grub2-efi-aa64 shim-aa64` from `TARGETARCH`. CI builds an arm64 job under emulation. A local build and boot need `qemu-user-static-aarch64`, `qemu-system-aarch64-core` and `edk2-aarch64` on the host.
+
 ## Next action
 
 1. rpm-ostree 2026.2 or later in the image, once Azure Linux 4.0 packages it, so `rpm-ostree upgrade` works on layered hosts without the digest rebase.
@@ -50,6 +52,7 @@ M1 to M5 are done. The VM boots the signed CI image from ghcr.io. What is left i
 
 ## TODO for the user
 
+- Install `qemu-user-static-aarch64 qemu-system-aarch64-core edk2-aarch64` on the host for local aarch64 builds and boots.
 - Delete the empty repository `an unused repository`, or keep it.
 - Test the VHD from `make vhd` on Azure. Needs a subscription.
 - Decide whether the desktop environment and Flatpak go on the roadmap. Both need packaging work in Azure Linux 4.0 first.

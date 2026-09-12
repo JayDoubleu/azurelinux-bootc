@@ -34,5 +34,5 @@ If 4.0 preview churn blocks M1 or M2, switch to 3.0 GA. Build the image with `rp
 
 - Desktop environment. Checked on 2026-09-12: the 4.0 preview repo has no compositor, display manager, session, portal or audio server. Only `xorg-x11-server-Xwayland` and `mesa-dri-drivers` exist. GNOME, KDE, Sway and their dependencies need packaging first.
 - Flatpak. Not in the 4.0 preview repo either. Same packaging work.
-- aarch64.
+- aarch64. Support written 2026-09-12; CI builds it under emulation. Boot test pending host packages.
 - Azure VM image. `make vhd` writes a fixed VHD from `out/disk.raw`. Not tested on Azure.

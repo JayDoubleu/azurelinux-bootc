@@ -15,24 +15,33 @@ FROM ${BASE_IMAGE}
 #    bootc ostree bootupd:   image-based updates and bootloader updates
 #    rpm-ostree:             package layering on the host, and the layer chunking step in scripts/15-chunk-image.sh
 #    bubblewrap:             bootc runs bootupctl inside a bwrap sandbox during install
-#    grub2-efi-x64 shim-x64: UEFI boot
-#    grub2-pc-modules:       BIOS boot; a generic install writes both loaders
+#    grub2-efi-x64 shim-x64: UEFI boot on x86_64; grub2-efi-aa64 shim-aa64 on aarch64
+#    grub2-pc-modules:       BIOS boot on x86_64; a generic install writes both loaders
 #    systemd-networkd:       DHCP inside QEMU
 #    openssh-server:         test access
 #    selinux-policy-targeted: bootc labels the installed files with this policy
 #    The preview repo is added because the beta repo lacks bubblewrap.
+#    TARGETARCH is amd64 or arm64. podman sets it from --platform; scripts/10-build-image.sh
+#    passes it as well. The bootloader packages differ per architecture.
 COPY repos/azurelinux-preview.repo /etc/yum.repos.d/
-RUN dnf -y install \
+ARG TARGETARCH=amd64
+RUN set -eux; \
+    case "${TARGETARCH}" in \
+      amd64) boot_pkgs="grub2-efi-x64 shim-x64 grub2-pc-modules" ;; \
+      arm64) boot_pkgs="grub2-efi-aa64 shim-aa64" ;; \
+      *) echo "unsupported TARGETARCH ${TARGETARCH}" >&2; exit 1 ;; \
+    esac; \
+    dnf -y install \
       kernel \
       bootc ostree bootupd composefs bubblewrap rpm-ostree \
       dracut dracut-config-generic \
       systemd systemd-udev systemd-networkd systemd-resolved \
-      grub2-efi-x64 grub2-tools grub2-pc-modules shim-x64 efibootmgr \
+      ${boot_pkgs} grub2-tools efibootmgr \
       selinux-policy-targeted policycoreutils \
       openssh-server sudo passwd shadow-utils \
       xfsprogs e2fsprogs dosfstools \
-      iproute iputils less vim-minimal \
-    && dnf clean all
+      iproute iputils less vim-minimal; \
+    dnf clean all
 
 # 2. Reference bootc layout shipped with the bootc package:
 #    /sysroot, /ostree -> sysroot/ostree, composefs enabled in prepare-root.conf,
