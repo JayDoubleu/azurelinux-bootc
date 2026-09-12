@@ -11,8 +11,9 @@ permissions:
   packages: write
 
 concurrency:
+  # A newer push cancels the older run of the same branch; only the newest commit matters.
   group: build-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: true
 
 jobs:
   build:
