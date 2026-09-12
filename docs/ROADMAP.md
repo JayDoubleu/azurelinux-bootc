@@ -19,7 +19,7 @@ Goal: `make upgrade` passes. The VM pulls version 2 from the local registry, reb
 ## M4: Build in CI (done 2026-09-08)
 
 - GitHub Actions builds, chunks, signs and pushes `ghcr.io/jaydoubleu/azurelinux-bootc:latest` on each push to `main`.
-- A boot test in CI with QEMU, if the runner supports KVM.
+- A boot test in CI with QEMU under KVM: install, boot, upgrade and rollback, signature test. Added 2026-09-12 for x86_64.
 
 ## M5: Package layering (done 2026-09-08)
 

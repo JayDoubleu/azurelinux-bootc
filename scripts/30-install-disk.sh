@@ -8,14 +8,19 @@
 # shellcheck source=lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-# Re-run on the host as root when needed. Loop devices and mounts need root.
+# Re-run on the host as root when needed. Loop devices and mounts need root. sudo resets the
+# environment, so the settings that select the image and the registry go through explicitly.
+sudo_env=(
+  "ARCH=$ARCH" "IMAGE_NAME=$IMAGE_NAME" "IMAGE_TAG=$IMAGE_TAG" "OUT_DIR=$OUT_DIR"
+  "REGISTRY_PORT=$REGISTRY_PORT" "REGISTRY_FROM_HOST=$REGISTRY_FROM_HOST" "DISK_SIZE=$DISK_SIZE"
+)
 if [ -f /run/.toolboxenv ]; then
   log "re-running on the host with sudo"
-  exec flatpak-spawn --host sudo env "ARCH=$ARCH" "$REPO_ROOT/scripts/30-install-disk.sh"
+  exec flatpak-spawn --host sudo env "${sudo_env[@]}" "$REPO_ROOT/scripts/30-install-disk.sh"
 fi
 if [ "$(id -u)" -ne 0 ]; then
   log "re-running with sudo"
-  exec sudo env "ARCH=$ARCH" "$REPO_ROOT/scripts/30-install-disk.sh"
+  exec sudo env "${sudo_env[@]}" "$REPO_ROOT/scripts/30-install-disk.sh"
 fi
 
 mkdir -p "$OUT_DIR/ssh"

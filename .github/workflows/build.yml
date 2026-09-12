@@ -10,29 +10,49 @@ permissions:
   contents: read
   packages: write
 
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Pinned: the firmware paths below are Ubuntu 24.04 paths.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
         include:
           - arch: x86_64
             suffix: ""
+            # The x86_64 runners have /dev/kvm, so the QEMU loop runs here.
+            test: true
           - arch: aarch64
             suffix: -arm64
+            # No KVM on the arm64 runners and bootc install cannot run under user-mode emulation.
+            test: false
     env:
       ARCH: ${{ matrix.arch }}
-      IMAGE_TAG: latest${{ matrix.suffix }}
+      # Ubuntu paths from the ovmf package. scripts/lib.sh defaults to the Fedora paths.
+      OVMF_CODE: /usr/share/OVMF/OVMF_CODE_4M.fd
+      OVMF_VARS_SRC: /usr/share/OVMF/OVMF_VARS_4M.fd
+      # IMAGE_TAG and REGISTRY_FROM_HOST stay unset here. The test loop uses the defaults,
+      # dev and localhost:5000. The ghcr.io push step sets its own.
     steps:
       - uses: actions/checkout@v4
 
-      - name: Registry path
-        # The push goes to ghcr.io/OWNER/azurelinux-bootc with the tags latest, vRUN and YYYYMMDD,
-        # each with -arm64 for aarch64. ghcr.io wants the owner in lowercase.
+      - name: Registry path and tags for ghcr.io
+        # ghcr.io wants the owner in lowercase. Tags: latest, vRUN and YYYYMMDD, with -arm64 for aarch64.
         run: |
-          echo "REGISTRY_FROM_HOST=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+          echo "GHCR=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
           echo "EXTRA_TAGS=v${GITHUB_RUN_NUMBER}${{ matrix.suffix }} $(date -u +%Y%m%d)${{ matrix.suffix }}" >> "$GITHUB_ENV"
+
+      - name: Free disk space
+        # The loop needs about 10 GB: two images in the store, the OCI directory and the disk.
+        if: matrix.test
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
 
       - name: Emulation for aarch64
         # Registers binfmt handlers, so podman runs arm64 containers on the x86_64 runner.
@@ -41,17 +61,34 @@ jobs:
         with:
           platforms: arm64
 
-      - name: Install podman and skopeo
+      - name: Install podman, skopeo, QEMU and OVMF
         run: |
           sudo apt-get update
-          sudo apt-get install -y podman skopeo
+          sudo apt-get install -y podman skopeo slirp4netns qemu-system-x86 qemu-utils ovmf
           podman --version
           skopeo --version
+          qemu-system-x86_64 --version | head -n 1
+
+      - name: Allow unprivileged user namespaces
+        # Ubuntu 24.04 lets only binaries with an AppArmor profile create user namespaces.
+        # podman has one, skopeo does not, and skopeo needs one to write the rootless image store.
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: Open /dev/kvm to the runner user
+        # The device is root:kvm 0660 and the runner user is not in the kvm group.
+        if: matrix.test
+        run: |
+          test -c /dev/kvm
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+          sudo podman info --format 'root store: {{.Store.GraphDriverName}} {{.Store.GraphOptions}}'
 
       - name: Signing key
         # With the three secrets set, every build signs with the same key and the public key in
         # the image matches. Without them the run makes a throwaway key, so the image is signed
-        # but no machine can verify it against a known key.
+        # but no machine can verify it against a known key. Fork pull requests get no secrets.
         env:
           SIGSTORE_PRIVATE_KEY: ${{ secrets.SIGSTORE_PRIVATE_KEY }}
           SIGSTORE_PASSPHRASE: ${{ secrets.SIGSTORE_PASSPHRASE }}
@@ -70,18 +107,66 @@ jobs:
             echo "using a throwaway signing key"
           fi
 
-      - name: Allow unprivileged user namespaces
-        # Ubuntu 24.04 lets only binaries with an AppArmor profile create user namespaces.
-        # podman has one, skopeo does not, and skopeo needs one to write the rootless image store.
-        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Check tools
+        if: matrix.test
+        run: make check
 
       - name: Build and chunk
         run: make build VERSION=${{ github.run_number }}
+
+      - name: Keep the tested image for the ghcr.io push
+        # make upgrade moves the dev tag to the next version. This tag keeps the tested one.
+        run: podman tag "localhost/azurelinux-bootc:dev${{ matrix.suffix }}" "localhost/azurelinux-bootc:latest${{ matrix.suffix }}"
+
+      - name: Local registry and signed push
+        if: matrix.test
+        run: |
+          make registry
+          make push
+
+      - name: Install to disk
+        # The script re-runs itself with sudo. The runner has passwordless sudo.
+        if: matrix.test
+        run: make disk
+
+      - name: Boot and check
+        if: matrix.test
+        run: |
+          make run-bg
+          make wait
+          scripts/45-ssh.sh bootc status
+          test "$(scripts/45-ssh.sh getenforce)" = Enforcing
+          test "$(scripts/45-ssh.sh cat /usr/lib/azurelinux-bootc/version)" = "${{ github.run_number }}"
+
+      - name: Upgrade and rollback test
+        if: matrix.test
+        run: make upgrade
+
+      - name: Signature test
+        if: matrix.test
+        run: make sig-test
+
+      - name: Stop the VM
+        if: always() && matrix.test
+        run: make stop
+
+      - name: Upload logs
+        if: always() && matrix.test
+        uses: actions/upload-artifact@v4
+        with:
+          name: qemu-logs-${{ matrix.arch }}
+          path: |
+            out/logs/
+            out/serial.log
+          if-no-files-found: ignore
 
       - name: Log in to ghcr.io
         if: github.event_name != 'pull_request'
         run: echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Sign and push
+      - name: Sign and push to ghcr.io
         if: github.event_name != 'pull_request'
+        env:
+          REGISTRY_FROM_HOST: ${{ env.GHCR }}
+          IMAGE_TAG: latest${{ matrix.suffix }}
         run: make push

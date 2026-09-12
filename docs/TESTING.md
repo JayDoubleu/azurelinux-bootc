@@ -32,6 +32,10 @@ QEMU user networking maps the host to `10.0.2.2` inside the VM. The image marks 
 
 `ARCH=aarch64` in front of any `make` target builds and tests the arm64 image. The tag, the disk image and the chunk directory get the suffix `-arm64`. On an x86_64 host the build and the chunk step run under user-mode emulation, and the VM runs under TCG, which is slow. The host needs three extra packages: `qemu-user-static-aarch64` for the build, `qemu-system-aarch64-core` and `edk2-aarch64` for the VM. The kernel arguments in `config/usr/lib/bootc/kargs.d/` select the console per architecture. CI builds both architectures on every push.
 
+## The same loop in CI
+
+`.github/workflows/build.yml` runs the loop on a GitHub-hosted `ubuntu-24.04` runner for x86_64: build, local registry, signed push, `make disk`, boot under KVM, `bootc status`, `make upgrade`, `make sig-test`, then the signed push to ghcr.io. The runner needs a udev rule for `/dev/kvm`, the `ovmf` package, and `kernel.apparmor_restrict_unprivileged_userns=0` for skopeo. The `OVMF_CODE` and `OVMF_VARS_SRC` variables point at the Ubuntu firmware paths. The arm64 job only builds and pushes: the arm64 runners have no KVM, and `bootc install` cannot run under user-mode emulation. The logs land in the `qemu-logs-x86_64` artifact.
+
 ## Layers
 
 `podman build` puts every package into one layer. `scripts/15-chunk-image.sh` runs `rpm-ostree compose build-chunked-oci` on the built image and regroups the files by package into up to 64 layers. The OCI directory `out/chunked` stays between builds so the layer boundaries stay stable. `bootc upgrade` then downloads only the layers whose packages changed.
