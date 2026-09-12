@@ -25,7 +25,9 @@ host podman build \
   "$REPO_ROOT" 2>&1 | tee "$LOG_DIR/build-v${version}.log"
 # Remove the image the tag pointed at before, unless it still has a tag. Keeps the store bounded.
 new_id="$(host podman image inspect --format '{{.Id}}' "${IMAGE_NAME}:${BUILD_TAG}")"
-if [ -n "$old_id" ] && [ "$old_id" != "$new_id" ]; then
+# Remove the previous image only when no tag points at it any more.
+if [ -n "$old_id" ] && [ "$old_id" != "$new_id" ] \
+   && [ "$(host podman image inspect --format '{{len .RepoTags}}' "$old_id" 2>/dev/null)" = "0" ]; then
   host podman rmi "$old_id" >/dev/null 2>&1 || true
 fi
 log "built ${IMAGE_NAME}:${BUILD_TAG} (VERSION=${version})"

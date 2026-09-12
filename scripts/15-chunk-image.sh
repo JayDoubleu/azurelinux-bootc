@@ -53,7 +53,9 @@ log "importing the chunked image as ${final_ref}"
 host skopeo copy -q "oci:${CHUNKED_DIR}:${IMAGE_TAG}" "containers-storage:${final_ref}"
 layers="$(host podman inspect --format '{{len .RootFS.Layers}}' "$final_ref")"
 new_id="$(host podman image inspect --format '{{.Id}}' "$final_ref")"
-if [ -n "$old_id" ] && [ "$old_id" != "$new_id" ]; then
+# Remove the previous image only when no tag points at it any more.
+if [ -n "$old_id" ] && [ "$old_id" != "$new_id" ] \
+   && [ "$(host podman image inspect --format '{{len .RepoTags}}' "$old_id" 2>/dev/null)" = "0" ]; then
   host podman rmi "$old_id" >/dev/null 2>&1 || true
 fi
 log "lint of the chunked image"
