@@ -9,5 +9,5 @@ if [ -f "$QEMU_PIDFILE" ] && host kill -0 "$(cat "$QEMU_PIDFILE")" 2>/dev/null; 
   die "the VM holds a write lock on $DISK_IMAGE; run: make stop"
 fi
 host qemu-img convert -f raw -O vpc -o subformat=fixed,force_size "$DISK_IMAGE" "$VHD_IMAGE"
-host qemu-img info "$VHD_IMAGE" | head -n 5
+host qemu-img info -f vpc "$VHD_IMAGE" | head -n 4
 log "VHD ready: $VHD_IMAGE"

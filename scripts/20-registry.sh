@@ -17,7 +17,7 @@ case "${1:-up}" in
     log "registry up at ${REGISTRY_FROM_HOST} (VM sees ${REGISTRY_FROM_VM})"
     ;;
   down)
-    host podman rm -f "$REGISTRY_NAME" >/dev/null 2>&1 || true
+    host podman rm -f -v "$REGISTRY_NAME" >/dev/null 2>&1 || true
     log "registry removed"
     ;;
   status)
