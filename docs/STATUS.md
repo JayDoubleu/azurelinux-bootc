@@ -36,7 +36,6 @@ M1 to M5 are done. The VM boots the signed CI image from ghcr.io. What is left i
 - 2026-09-07: the Containerfile pins the base image by digest (tag `4.0.2026052700`). `make base-digest` compares the pin with the `4.0` tag. The build reuses the cached layers with the pin. The image records its package list in `/usr/lib/azurelinux-bootc/packages` (302 packages).
 
 - 2026-09-12: the QEMU loop runs in CI. On the `ubuntu-24.04` runner the x86_64 job builds, chunks, signs, installs to a disk, boots under KVM, checks `bootc status`, SELinux and the version, runs the upgrade and rollback test and the signature test, and pushes to ghcr.io, in 15 minutes. The arm64 job builds under emulation in 32 minutes. Actions are pinned by commit and Dependabot bumps them.
-- 2026-09-12: the history was rewritten before the public release: `install.rs` removed from every commit and three machine details replaced. Old workflow runs and old package versions were deleted.
 - 2026-09-12: the aarch64 image builds in CI under emulation in 34 minutes and is on ghcr.io as `latest-arm64`, `v<run>-arm64` and `<date>-arm64`: architecture `arm64`, 65 layers, version 13. The Containerfile picks `grub2-efi-aa64 shim-aa64` from `TARGETARCH`.
 
 ## What is unverified or broken
