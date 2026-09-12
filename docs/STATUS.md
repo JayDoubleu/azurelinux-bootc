@@ -36,6 +36,8 @@ M1 to M5 are done. The VM boots the signed CI image from ghcr.io. What is left i
 - 2026-09-07: the Containerfile pins the base image by digest (tag `4.0.2026052700`). `make base-digest` compares the pin with the `4.0` tag. The build reuses the cached layers with the pin. The image records its package list in `/usr/lib/azurelinux-bootc/packages` (302 packages).
 
 - 2026-09-12: the QEMU loop runs in CI. On the `ubuntu-24.04` runner the x86_64 job builds, chunks, signs, installs to a disk, boots under KVM, checks `bootc status`, SELinux and the version, runs the upgrade and rollback test and the signature test, and pushes to ghcr.io, in 15 minutes. The arm64 job builds under emulation in 32 minutes. Actions are pinned by commit and Dependabot bumps them.
+- 2026-09-12: the repository is public. The build workflow skips changes to docs only.
+- 2026-09-12: the arm64 CI job runs on the native `ubuntu-24.04-arm` runner in 6.7 minutes, and `bootc install to-disk` completes there natively, bootloader included. No KVM on that runner; a boot under same-arch TCG is the next probe.
 - 2026-09-12: the aarch64 image builds in CI under emulation in 34 minutes and is on ghcr.io as `latest-arm64`, `v<run>-arm64` and `<date>-arm64`: architecture `arm64`, 65 layers, version 13. The Containerfile picks `grub2-efi-aa64 shim-aa64` from `TARGETARCH`.
 
 ## What is unverified or broken
@@ -44,14 +46,14 @@ M1 to M5 are done. The VM boots the signed CI image from ghcr.io. What is left i
 - The packages are not pinned. The preview repo has no snapshots. The package list in the image is the record of what each build got.
 - `bootc upgrade` refuses a deployment with layered packages: "Deployment contains local rpm-ostree modifications; cannot upgrade via bootc".
 - `rpm-ostree upgrade` pulls the new image and exits 0 without a deployment. Fix submitted: https://github.com/microsoft/azurelinux/pull/18804 (microsoft/azurelinux, from the fork `JayDoubleu/azurelinux-1`). A local rebuild with the fix passed the VM test on 2026-09-12: `rpm-ostree upgrade` stages a newer image, also with `strace` layered, and prints "No upgrade available." when there is none. Cause: rpm-ostree issue #5567, an early return in `deploy_transaction_execute` that ignores the changed base image for container origins. Fixed upstream in 2026.2 (PR #5569). Azure Linux 4.0 ships 2026.1 in the preview repo and on the `4.0` spec branch (checked 2026-09-12). Workarounds verified on 2026-09-12: `rpm-ostree deploy sha256:<digest>` stages the new image; with a layered package, `rpm-ostree rebase ostree-image-signed:docker://10.0.2.2:5000/azurelinux-bootc@sha256:<digest>` stages the new image plus the layer, and a second `rpm-ostree rebase` to the tag reference moves the origin back to the tag. `rpm-ostree rebase` to the unchanged tag reference fails with "Old and new refs are equal".
-- 2026-09-12: the repository is public. The arm64 CI job moved to the native `ubuntu-24.04-arm` runner with an informational `make disk` probe; result pending.
 - The aarch64 disk install does not work under user-mode emulation on an x86_64 host. `bootc install to-disk` re-executes itself into the host mount namespace, and `setns` fails for an emulated process: "Re-exec in host mountns: setns: Invalid argument". The install and the boot test need a native arm64 machine, for example the `ubuntu-24.04-arm` runner in CI.
 - Measured on 2026-09-12 before the layer split: an upgrade that adds `tmux` downloaded 6 layers of 83.5 MB. `EXTRA_PACKAGES=tmux make upgrade` runs that test. Not measured again after the split; expected: the new package layers plus about 1.5 MB.
 
 ## Next action
 
-1. Watch the Azure Linux PR https://github.com/microsoft/azurelinux/pull/18804. It pins rpm-ostree to the Fedora 43 head with the fix. When it merges and the preview repo ships the new build, rebuild the image and drop the digest rebase note.
-2. Future work from `docs/ROADMAP.md`: desktop environment, Flatpak, aarch64, Azure VM image.
+1. Watch the Azure Linux PR https://github.com/microsoft/azurelinux/pull/18804, tracked in this repository as issue #1. It pins rpm-ostree to the Fedora 43 head with the fix. When it merges and the preview repo ships the new build, rebuild the image and drop the digest rebase note.
+2. An arm64 boot probe under TCG on the `ubuntu-24.04-arm` runner: `qemu-system-arm`, `qemu-efi-aarch64`, `OVMF_CODE=/usr/share/AAVMF/AAVMF_CODE.fd`, a longer ssh wait.
+3. Future work from `docs/ROADMAP.md`: desktop environment, Flatpak, aarch64, Azure VM image.
 
 ## Environment notes
 
