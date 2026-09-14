@@ -52,7 +52,8 @@ M1 to M5 are done, the repository is public, and CI runs the full test loop for 
 ## Next action
 
 1. Watch the Azure Linux PR https://github.com/microsoft/azurelinux/pull/18804, tracked in this repository as issue #1. It pins rpm-ostree to the Fedora 43 head with the fix. When it merges and the preview repo ships the new build, rebuild the image and drop the digest rebase note.
-2. Future work from `docs/ROADMAP.md`: desktop environment, Flatpak, aarch64, Azure VM image.
+2. Watch the upstream feature request https://github.com/microsoft/azurelinux/issues/18817 for an official Azure Linux bootc base image. If the project adopts one, rebase this Containerfile on it.
+3. Future work from `docs/ROADMAP.md`: desktop environment, Flatpak, aarch64, Azure VM image.
 
 ## Environment notes
 

@@ -2,7 +2,7 @@
 
 An experiment: build a bootable [Azure Linux](https://github.com/microsoft/azurelinux) image that works like Fedora Silverblue. The operating system is a container image. Updates come from an OCI registry. Each update is atomic and can be rolled back.
 
-Status: experimental. Nothing here is supported by Microsoft.
+Status: experimental. Nothing here is supported by Microsoft. An official bootc base image is requested upstream in [microsoft/azurelinux#18817](https://github.com/microsoft/azurelinux/issues/18817).
 
 ## How it works
 

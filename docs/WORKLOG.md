@@ -70,3 +70,4 @@ Append one entry per session. Newest at the bottom. Keep each entry short: what 
 ## 2026-09-14
 
 - A maintainer replied on microsoft/azurelinux#18802 and asked whether the bug was reported to Fedora 43. Answered: Fedora 43 shipped the two patches in March and April as `2026.1-2.fc43` and `2026.1-3.fc43`; Azure Linux builds from the 2026-02-24 snapshot; the pin in #18804 or the next snapshot bump picks them up. Mirrored on issue #1.
+- Opened microsoft/azurelinux#18817: a feature request for an official Azure Linux 4.0 bootc base image, with this repository as the proof of concept and the list of packaging fixes it needed.
