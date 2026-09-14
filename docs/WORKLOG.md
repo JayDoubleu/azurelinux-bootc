@@ -66,3 +66,7 @@ Append one entry per session. Newest at the bottom. Keep each entry short: what 
 - The native arm64 runner builds in 6.7 minutes and `make disk` completes there. Opened issue #1 to track the rpm-ostree fix with links to the upstream issue and pull request. The build workflow now ignores docs-only changes.
 - The arm64 disk booted under TCG on the native runner in 3 minutes 40 seconds, enforcing, version 29. Promoted the probe to the full loop: `SSH_WAIT` in `scripts/lib.sh` sets the ssh wait, 1500 seconds on arm64.
 - The arm64 job passes the full loop on the native runner in 29 minutes: upgrade, rollback and signature test under TCG. One fix on the way: the container probe used the x86_64 tag.
+
+## 2026-09-14
+
+- A maintainer replied on microsoft/azurelinux#18802 and asked whether the bug was reported to Fedora 43. Answered: Fedora 43 shipped the two patches in March and April as `2026.1-2.fc43` and `2026.1-3.fc43`; Azure Linux builds from the 2026-02-24 snapshot; the pin in #18804 or the next snapshot bump picks them up. Mirrored on issue #1.
