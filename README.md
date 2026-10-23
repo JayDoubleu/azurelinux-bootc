@@ -14,6 +14,7 @@ Status: experimental. Nothing here is supported by Microsoft. An official bootc 
 - QEMU boots the disk file with UEFI firmware.
 - A local registry serves a second image version. The VM runs `bootc upgrade`, reboots, then `bootc rollback`.
 - The image is signed with a sigstore key. A policy in the image makes `bootc upgrade` refuse unsigned images.
+- `rpm-ostree install` layers a package on the host. The host then updates with `rpm-ostree upgrade` and keeps the package.
 
 See `docs/ROADMAP.md` for milestones and `docs/decisions/` for why we chose this path.
 
@@ -50,6 +51,7 @@ make disk        # write the image to out/disk.raw (re-runs itself with sudo on 
 make run-bg      # boot out/disk.raw in QEMU in the background; make ssh opens a root shell
 make upgrade     # build v2, push it, upgrade the VM, verify, roll back
 make sig-test    # check that the VM refuses an unsigned image
+make layering    # layer a package, upgrade with rpm-ostree, then reset
 make stop        # stop the VM
 ```
 

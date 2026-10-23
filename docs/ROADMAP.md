@@ -24,7 +24,7 @@ Goal: `make upgrade` passes. The VM pulls version 2 from the local registry, reb
 ## M5: Package layering (done 2026-09-08)
 
 - `rpm-ostree install` works on the bootc host. Verified with `strace`.
-- A layered deployment blocks `bootc upgrade`. `rpm-ostree upgrade` is broken in rpm-ostree 2026.1 (upstream issue #5567). A rebase to a digest reference is the workaround. See `docs/STATUS.md`.
+- A layered deployment blocks `bootc upgrade`. Such a host updates with `rpm-ostree upgrade`. It works since `rpm-ostree-2026.1-7.azl4`, verified on 2026-10-23 with `make layering`. Older builds had upstream issue #5567: the upgrade staged nothing.
 
 ## Fallback: Azure Linux 3.0 with rpm-ostree
 

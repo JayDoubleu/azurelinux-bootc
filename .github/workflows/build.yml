@@ -173,6 +173,11 @@ jobs:
         if: matrix.test
         run: make sig-test
 
+      - name: Layering and rpm-ostree upgrade test
+        # x86_64 only. The test has four reboots and a package install, which take long under TCG.
+        if: matrix.test && matrix.arch == 'x86_64'
+        run: make layering
+
       - name: Stop the VM
         if: always() && matrix.test
         run: make stop
