@@ -71,3 +71,13 @@ Append one entry per session. Newest at the bottom. Keep each entry short: what 
 
 - A maintainer replied on microsoft/azurelinux#18802 and asked whether the bug was reported to Fedora 43. Answered: Fedora 43 shipped the two patches in March and April as `2026.1-2.fc43` and `2026.1-3.fc43`; Azure Linux builds from the 2026-02-24 snapshot; the pin in #18804 or the next snapshot bump picks them up. Mirrored on issue #1.
 - Opened microsoft/azurelinux#18817: a feature request for an official Azure Linux 4.0 bootc base image, with this repository as the proof of concept and the list of packaging fixes it needed.
+
+## 2026-10-23
+
+- A maintainer closed microsoft/azurelinux#18804 on 2026-10-22: the latest component refresh pins rpm-ostree to Fedora 43 dist-git commit `1e217ba`. That commit carries the backports of coreos/rpm-ostree#5569 and #5575. The preview repo ships `rpm-ostree-2026.1-7.azl4` since 2026-10-08, with both backports in its changelog.
+- The same refresh moved bootc to 1.16.13, ostree to 2026.2 and bootupd to 0.2.35. The CI run on 2026-10-14 already built and tested with them.
+- `out/` was gone. Removed this project's old images from both podman stores and the old registry, because their build cache held `rpm-ostree-2026.1-4.azl4` and the host root file system had 7.9 GB free.
+- Added `scripts/65-layering-test.sh` and `make layering`: `rpm-ostree upgrade` without and with a layered `strace`, a check for "No upgrade available.", then `rpm-ostree reset` and `bootc upgrade --check`. CI runs it on x86_64.
+- Negative control: an image with `EXTRA_PACKAGES="rpm-ostree-2026.1-4.azl4 rpm-ostree-libs-2026.1-4.azl4"` failed the test at the first upgrade: 6 layers pulled, nothing staged. After `bootc upgrade` to an image with `2026.1-7.azl4`, `make layering` passed in 4 minutes. `make upgrade` and `make sig-test` passed after it.
+- Port 5000 was in use by a registry of another project. The owner approved to stop it for the test. It runs again.
+- Removed the digest rebase workaround from the docs.

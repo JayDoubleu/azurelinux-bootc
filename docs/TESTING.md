@@ -13,7 +13,8 @@ make run-bg           # 5. QEMU boots out/disk.raw with OVMF; serial output goes
 make ssh              # 6. ssh root@localhost -p 2222 with out/ssh/id_ed25519
 make upgrade          # 7. build v2, push, `bootc upgrade`, reboot, verify, `bootc rollback`, reboot, verify
 make sig-test         # 7b. push an unsigned image, expect `bootc upgrade --check` to fail, push signed, expect pass
-make switch           # 7c. move the VM to the signed image on ghcr.io, reboot, verify
+make layering         # 7c. `rpm-ostree upgrade` with and without a layered package, then `rpm-ostree reset`
+make switch           # 7d. move the VM to the signed image on ghcr.io, reboot, verify
 make stop             # 8. stop the VM
 ```
 
@@ -34,7 +35,7 @@ QEMU user networking maps the host to `10.0.2.2` inside the VM. The image marks 
 
 ## The same loop in CI
 
-`.github/workflows/build.yml` runs the loop on a GitHub-hosted `ubuntu-24.04` runner for x86_64: build, local registry, signed push, `make disk`, boot under KVM, `bootc status`, `make upgrade`, `make sig-test`, then the signed push to ghcr.io. The runner needs a udev rule for `/dev/kvm`, the `ovmf` package, and `kernel.apparmor_restrict_unprivileged_userns=0` for skopeo. The `OVMF_CODE` and `OVMF_VARS_SRC` variables point at the Ubuntu firmware paths. The arm64 job runs the same loop on the native `ubuntu-24.04-arm` runner. That runner has no KVM, so the guest runs under same-architecture TCG and boots in about 4 minutes; `SSH_WAIT=1500` gives the reboots room. The logs land in the `qemu-logs-x86_64` artifact.
+`.github/workflows/build.yml` runs the loop on a GitHub-hosted `ubuntu-24.04` runner for x86_64: build, local registry, signed push, `make disk`, boot under KVM, `bootc status`, `make upgrade`, `make sig-test`, `make layering`, then the signed push to ghcr.io. The runner needs a udev rule for `/dev/kvm`, the `ovmf` package, and `kernel.apparmor_restrict_unprivileged_userns=0` for skopeo. The `OVMF_CODE` and `OVMF_VARS_SRC` variables point at the Ubuntu firmware paths. The arm64 job runs the same loop without `make layering` on the native `ubuntu-24.04-arm` runner. That runner has no KVM, so the guest runs under same-architecture TCG and boots in about 4 minutes; `SSH_WAIT=1500` gives the reboots room. The logs land in the `qemu-logs-x86_64` artifact.
 
 ## Layers
 
@@ -47,6 +48,23 @@ The first `make build` runs `scripts/22-keys.sh`. It creates a sigstore key pair
 `make push` signs the image with the private key. The signature is stored in the registry next to the image. `config/etc/containers/policy.json` in the image rejects every image by default and accepts `10.0.2.2:5000/azurelinux-bootc` only with a valid signature from that key. The signature names the image `localhost:5000/azurelinux-bootc`, the name the host pushed to, so the policy maps the VM's name for the registry to it with `exactRepository`.
 
 `make disk` installs with `--enforce-container-sigpolicy`. `make sig-test` checks both directions: an unsigned image is refused, the signed image is accepted.
+
+## Package layering
+
+`rpm-ostree install` adds a package to the host on top of the image. The result is a layered deployment. `bootc upgrade` refuses a layered deployment, so the host updates with `rpm-ostree upgrade` instead.
+
+`make layering` tests this path:
+
+1. It builds and pushes version N+1. `rpm-ostree upgrade` must stage it. After the reboot the VM must run N+1.
+2. `rpm-ostree upgrade` runs again. It must print "No upgrade available." and stage nothing.
+3. `rpm-ostree install strace` layers a package. After the reboot the package must be there.
+4. It builds and pushes version N+2. `rpm-ostree upgrade` must stage it with the layer. After the reboot the VM must run N+2 with `strace`.
+5. `rpm-ostree upgrade` runs again. It must print "No upgrade available.".
+6. `rpm-ostree reset` removes the layer. After the reboot `strace` must be gone and `bootc upgrade --check` must work.
+
+`LAYER_PACKAGE` selects another package. The package must come from the repos in the image and must not be in the image. The VM needs internet access to download it. The test needs a booted deployment without layered packages.
+
+rpm-ostree 2026.1 up to `2026.1-4.azl4` had a bug: `rpm-ostree upgrade` pulled the new image and exited 0 without a deployment (rpm-ostree issue #5567). Azure Linux fixed it in `2026.1-7.azl4`. This test fails on the old package.
 
 ## Switching to ghcr.io
 

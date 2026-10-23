@@ -2,7 +2,7 @@
 
 Read this first. Update it at the end of every session.
 
-Last updated: 2026-09-12
+Last updated: 2026-10-23
 
 ## Current milestone
 
@@ -39,21 +39,21 @@ M1 to M5 are done, the repository is public, and CI runs the full test loop for 
 - 2026-09-12: the repository is public. The build workflow skips changes to docs only.
 - 2026-09-12: the arm64 CI job runs on the native `ubuntu-24.04-arm` runner. `bootc install to-disk` completes natively, and the disk boots under same-architecture TCG in 3 minutes 40 seconds: `aarch64`, SELinux enforcing, `bootc status` fine. The full loop runs there too: install, boot, upgrade, rollback and signature test pass in 29 minutes, and a version bump downloads 2 layers of 1.8 MB.
 - 2026-09-12: the aarch64 image builds in CI under emulation in 34 minutes and is on ghcr.io as `latest-arm64`, `v<run>-arm64` and `<date>-arm64`: architecture `arm64`, 65 layers, version 13. The Containerfile picks `grub2-efi-aa64 shim-aa64` from `TARGETARCH`.
+- 2026-10-23: `rpm-ostree upgrade` works. Azure Linux closed microsoft/azurelinux#18804 on 2026-10-22: the 4.0 branch pins rpm-ostree to the Fedora 43 dist-git commit `1e217ba`, which carries the backports of coreos/rpm-ostree#5569 and #5575. The preview repo ships it as `rpm-ostree-2026.1-7.azl4` since 2026-10-08, for x86_64 and aarch64. `make layering` passed locally: `rpm-ostree upgrade` staged version 3, printed "No upgrade available." with no new image, staged version 4 with `strace` layered, and `rpm-ostree reset` restored a host that `bootc upgrade --check` accepts. The same test failed on an image with `rpm-ostree-2026.1-4.azl4`: the upgrade pulled 6 layers and staged nothing. CI runs `make layering` on x86_64.
+- 2026-10-23: the preview repo moved the bootc stack to bootc 1.16.13, ostree 2026.2 and bootupd 0.2.35. The Containerfile builds with them unchanged. `make upgrade` and `make sig-test` pass, SELinux is enforcing and no unit fails. The CI run on 2026-10-14 used the same packages and passed on both architectures.
 
 ## What is unverified or broken
 
 - Lint warning `var-tmpfiles`: `/var` content has no tmpfiles.d entries. Deferred. ostree copies the image's `/var` into the machine's `/var` on the first deployment.
 - The packages are not pinned. The preview repo has no snapshots. The package list in the image is the record of what each build got.
-- `bootc upgrade` refuses a deployment with layered packages: "Deployment contains local rpm-ostree modifications; cannot upgrade via bootc".
-- `rpm-ostree upgrade` pulls the new image and exits 0 without a deployment. Fix submitted: https://github.com/microsoft/azurelinux/pull/18804 (microsoft/azurelinux, from the fork `JayDoubleu/azurelinux-1`). A local rebuild with the fix passed the VM test on 2026-09-12: `rpm-ostree upgrade` stages a newer image, also with `strace` layered, and prints "No upgrade available." when there is none. Cause: rpm-ostree issue #5567, an early return in `deploy_transaction_execute` that ignores the changed base image for container origins. Fixed upstream in 2026.2 (PR #5569). Azure Linux 4.0 ships 2026.1 in the preview repo and on the `4.0` spec branch (checked 2026-09-12). Workarounds verified on 2026-09-12: `rpm-ostree deploy sha256:<digest>` stages the new image; with a layered package, `rpm-ostree rebase ostree-image-signed:docker://10.0.2.2:5000/azurelinux-bootc@sha256:<digest>` stages the new image plus the layer, and a second `rpm-ostree rebase` to the tag reference moves the origin back to the tag. `rpm-ostree rebase` to the unchanged tag reference fails with "Old and new refs are equal".
+- `bootc upgrade` refuses a deployment with layered packages: "Deployment contains local rpm-ostree modifications; cannot upgrade via bootc". Such a host updates with `rpm-ostree upgrade`.
 - The aarch64 disk install does not work under user-mode emulation on an x86_64 host. `bootc install to-disk` re-executes itself into the host mount namespace, and `setns` fails for an emulated process: "Re-exec in host mountns: setns: Invalid argument". The install and the boot test need a native arm64 machine, for example the `ubuntu-24.04-arm` runner in CI.
 - Measured on 2026-09-12 before the layer split: an upgrade that adds `tmux` downloaded 6 layers of 83.5 MB. `EXTRA_PACKAGES=tmux make upgrade` runs that test. Not measured again after the split; expected: the new package layers plus about 1.5 MB.
 
 ## Next action
 
-1. Watch the Azure Linux PR https://github.com/microsoft/azurelinux/pull/18804, tracked in this repository as issue #1. It pins rpm-ostree to the Fedora 43 head with the fix. When it merges and the preview repo ships the new build, rebuild the image and drop the digest rebase note.
-2. Watch the upstream feature request https://github.com/microsoft/azurelinux/issues/18817 for an official Azure Linux bootc base image. If the project adopts one, rebase this Containerfile on it.
-3. Future work from `docs/ROADMAP.md`: desktop environment, Flatpak, aarch64, Azure VM image.
+1. Watch the upstream feature request https://github.com/microsoft/azurelinux/issues/18817 for an official Azure Linux bootc base image. If the project adopts one, rebase this Containerfile on it.
+2. Future work from `docs/ROADMAP.md`: desktop environment, Flatpak, aarch64, Azure VM image.
 
 ## Environment notes
 
